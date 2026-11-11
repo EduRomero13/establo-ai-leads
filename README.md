@@ -1,121 +1,281 @@
 # ESTABLO AI — Sistema Inteligente de Gestión y Conversión de LEADS
-### Parrilladas El Establo (Trujillo, Perú)
-> **Proyecto para el Curso de Inteligencia de Negocios — Ingeniería de Sistemas**  
-> **Alcance Riguroso: Fase LEADS** (`BUYER → LEAD → PAYER → CUSTOMER`)
+### Plataforma SaaS de Inteligencia Comercial y Ventas Personalizadas con IA
+**Parrilladas El Establo · Trujillo, Perú**  
+*Proyecto de Aplicación Práctica para el Curso de Inteligencia de Negocios — Ingeniería de Sistemas*
 
 ---
 
-## 1. Visión y Misión del Sistema
-
-**ESTABLO AI** es una plataforma SaaS empresarial de inteligencia comercial desarrollada para la startup gastronómica **Parrilladas El Establo** en Trujillo, Perú.
-
-Su objetivo es convertir personas interesadas en clientes compradores (**PAYERS**) mediante:
-1. **Recomendaciones gastronómicas personalizadas** basadas en cortes más pedidos por segmento y combos.
-2. **Atención comercial contextualizada con Agente IA** mediante WhatsApp.
-3. **Gestión inteligente de objeciones comerciales** (precios, gramajes, tiempos, ocasiones de consumo).
-4. **Seguimiento comercial disciplinado** bajo la regla de inactividad de 72 horas (`TIMEOUT_72H` vs `RECHAZO`).
-5. **Verificación rigurosa de la conversión a PAYER** exclusivamente cuando existe un primer pago confirmado (incluyendo anticipos y pagos parciales).
-6. **Cálculo automatizado de los indicadores oficiales**:
-   - **TCP** (Tiempo Promedio de Conversión)
-   - **TEN** (Tasa de Éxito de Negociación)
-   - **TPN** (Tasa de Pérdida de Negociación)
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-15.5-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Microsoft%20SQL%20Server-2019%2B-CC292B?style=for-the-badge&logo=microsoft-sql-server&logoColor=white" alt="SQL Server" />
+  <img src="https://img.shields.io/badge/Node.js-22.x-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Estado-Producci%C3%B3n%20Verificada-emerald?style=for-the-badge" alt="Estado" />
+</p>
 
 ---
 
-## 2. Alcance Exclusivo: Únicamente Fase LEADS
-
-El ciclo de vida del cliente gastronómico contempla:
-$$\text{BUYER} \longrightarrow \mathbf{LEAD} \longrightarrow \text{PAYER} \longrightarrow \text{CUSTOMER}$$
-
-- **No es un sistema de POS de caja, ni de comandas de cocina, ni de mesas, ni de fidelización.**
-- El sistema se concentra en el **seguimiento comercial previo y hasta la confirmación de la primera compra o anticipo**.
-- Se consulta la recurrencia e historial de otras fases únicamente como evidencia para atender mejor al lead que reincide en el ciclo comercial.
-
----
-
-## 3. Arquitectura y Tecnologías
-
-### Frontend
-- **Framework**: Next.js 15 (App Router con Server Components y Client Components).
-- **Lenguaje**: TypeScript con tipado estricto.
-- **Diseño Visual**: Tailwind CSS con paleta premium de restaurante parrillero + SaaS corporativo.
-- **Iconografía**: `lucide-react`.
-- **Gráficos**: `recharts` (BarChart, LineChart, PieChart interactivos).
-- **Temas**: Modo Claro y Modo Oscuro completo con persistencia en `localStorage`, selector sol/luna y sin parpadeo (FOUC).
-- **Diseño Responsive**: Optimizado para Smartphone (320px+), Tablet y Escritorio.
-
-### Backend y Base de Datos
-- **Entorno**: Node.js v22 con rutas API de Next.js (`/api/*`).
-- **Base de Datos**: **Microsoft SQL Server (Base `buyer`)**.
-- **Conector**: Paquete `mssql` con pool singleton de conexiones y consultas SQL estrictamente parametrizadas.
-- **Integridad**: **No ejecuta SQL arbitrario**. Las herramientas del agente invocan procedimientos y funciones controladas del backend.
-- **Validación de Promociones**: Motor de reglas en zona horaria `America/Lima` que valida día de la semana (`L,M,X,J,V,S,D`), vigencia de fechas, segmento del lead, producto aplicable y ventana de cumpleaños (±3 días).
-
-### Inteligencia Artificial
-- **Integración Dual**:
-  - **Google Gemini** (`gemini-1.5-flash`) mediante API Key en variables de entorno.
-  - **Copiloto Heurístico Autónomo**: Motor experto en ventas gastronómicas peruanas que funciona de forma offline si no se proporciona API key, garantizando demostraciones 100% estables en cualquier momento.
+## 📑 Tabla de Contenidos
+1. [Visión General del Proyecto](#1-visión-general-del-proyecto)
+2. [Alcance Exclusivo: Fase LEADS](#2-alcance-exclusivo-fase-leads)
+3. [Arquitectura del Sistema](#3-arquitectura-del-sistema)
+4. [Módulos de la Plataforma](#4-módulos-de-la-plataforma)
+5. [Modelo de Datos y Vistas SQL Server V3](#5-modelo-de-datos-y-vistas-sql-server-v3)
+6. [Métricas e Indicadores Oficiales (KPIs)](#6-métricas-e-indicadores-oficiales-kpis)
+7. [Casos de Negocio Sintéticos Validados](#7-casos-de-negocio-sintéticos-validados)
+8. [Motor de Inteligencia Artificial y Reglas de Promociones](#8-motor-de-inteligencia-artificial-y-reglas-de-promociones)
+9. [Instalación y Puesta en Marcha](#9-instalación-y-puesta-en-marcha)
+10. [Estructura del Proyecto](#10-estructura-del-proyecto)
+11. [Seguridad y Buenas Prácticas](#11-seguridad-y-buenas-prácticas)
 
 ---
 
-## 4. Los 9 Módulos del Sistema (Sidebar)
+## 1. Visión General del Proyecto
 
-| # | Módulo | Descripción Funcional |
+**ESTABLO AI** es una solución de software empresarial diseñada para optimizar y automatizar el embudo de ventas de la startup gastronómica **Parrilladas El Establo** en la ciudad de Trujillo, Perú.
+
+A diferencia de los chatbots decorativos o maquetas con datos estáticos, este sistema opera conectado en tiempo real a una base de datos relacional **Microsoft SQL Server (Base `buyer` V3)**, procesando datos transaccionales de clientes, cortes de carne, combos paquetizados, campañas de captación, reservas y transacciones de pago.
+
+### Propósito Comercial
+Convertir personas interesadas (**LEADS**) en clientes compradores (**PAYERS**) mediante atención contextualizada en canales de mensajería (WhatsApp), recomendaciones personalizadas según el segmento del consumidor y resolución transparente de objeciones comerciales.
+
+---
+
+## 2. Alcance Exclusivo: Fase LEADS
+
+El ciclo de vida del cliente contempla cuatro fases:
+
+```
+[ BUYER ] ────────> [ LEAD ] ────────> [ PAYER ] ────────> [ CUSTOMER ]
+ Interesado          Prospecto          Primer Pago         Pedido Entregado
+ Anónimo            Identificado        Confirmado            y Atendido
+```
+
+### Reglas de Frontera del Alcance:
+- **Enfoque Obligatorio**: El sistema opera **exclusivamente dentro de la fase LEAD** (desde que la persona envía un formulario o escribe por WhatsApp solicitando información, hasta que confirma su primer pago).
+- **Conversión a PAYER**: Se produce en el instante exacto en que se registra un **primer pago confirmado** (incluyendo pagos parciales o anticipos de reserva).
+- **Fuera del Alcance**: No incluye punto de venta de caja (POS), gestión de comandas de cocina, asignación de mesas en salón ni sistemas de fidelización posterior.
+- **Trazabilidad de Recurrencia**: Cuando un cliente recurrente vuelve a negociar, reingresa como un **nuevo ciclo de LEAD** en `dbo.negociacion`, manteniendo la memoria de sus consumos anteriores sin duplicar su identidad.
+
+---
+
+## 3. Arquitectura del Sistema
+
+La solución adopta una arquitectura en capas desacoplada con separación estricta de responsabilidades:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        CAPA DE PRESENTACIÓN (UI)                       │
+│  Next.js 15 (App Router) + Tailwind CSS + Lucide Icons + Recharts UI   │
+│         [Modo Claro / Modo Oscuro] [Mobile First 320px - Desktop]      │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / JSON
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                       CAPA DE SERVICIOS Y API                          │
+│     Rutas de Servidor Next.js (/api/kpi, /api/leads, /api/chat, etc.)  │
+│  - Controladores REST            - Validación de Entradas              │
+│  - Middleware de Auditoría       - Formateo de Moneda Peruana (PEN)    │
+└──────────────┬───────────────────────────────┬─────────────────────────┘
+               │                               │
+┌──────────────▼─────────────┐   ┌─────────────▼─────────────────────────┐
+│     MOTOR DE REGLAS E IA   │   │       CAPA DE ACCESO A DATOS          │
+│ - Copiloto Heurístico V3   │   │ - Pool Singleton de Conexiones        │
+│ - Integración Google Gemini│   │ - Consultas Parametrizadas (mssql)    │
+│ - Validador Reglas Lima    │   │ - Protección contra Inyección SQL     │
+└──────────────┬─────────────┘   └─────────────┬─────────────────────────┘
+               │                               │
+               └───────────────┬───────────────┘
+                               │ TCP/IP Port 1434
+┌──────────────────────────────▼─────────────────────────────────────────┐
+│                       MICROSOFT SQL SERVER                             │
+│                     Base de Datos: 'buyer'                             │
+│         - 34 Tablas Transaccionales     - 9 Vistas Oficiales           │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 4. Módulos de la Plataforma
+
+La barra de navegación lateral (*Sidebar*) organiza las funciones en 9 módulos especializados:
+
+### 1. Dashboard — Centro de Inteligencia Comercial (`/`)
+- **Diferenciación Operativa**: Desglosa claramente **ciclos comerciales** (19 ciclos) frente a **personas únicas** (17 personas).
+- **Tarjetas de los 3 KPIs Oficiales**: Estado semafórico (Bueno, Regular, Malo) de TCP, TEN y TPN.
+- **Visualizaciones Gráficas con Recharts**:
+  - Evolución mensual de ciclos vs conversiones.
+  - Curvas de tasa de éxito (TEN) vs tasa de pérdida (TPN).
+  - Distribución de volumen de leads por segmento de cliente.
+  - Efectividad de las recomendaciones emitidas por el Agente IA.
+
+### 2. Gestión de Leads — CRM Comercial (`/leads`)
+- Tabla integral con búsqueda instantánea por nombre, teléfono o correo.
+- Filtros por estado transaccional (`ABIERTA`, `CONVERTIDA`, `PERDIDA`) y segmento (*Familias*, *Estudiantes*, *Amigos*).
+- Cálculo en vivo del **tiempo sin respuesta** del cliente.
+- Botones de acceso directo a los 6 casos de demostración académica.
+
+### 3. Perfil 360° del Lead (`/leads/[id]`)
+Ficha comercial exhaustiva estructurada en 7 secciones:
+1. **Información Personal**: Identidad, segmento declarado, contacto y fase actual.
+2. **Preferencias Gastronómicas**: Plato favorito declarado vs corte más comprado históricamente (`vw_preferencias_persona`).
+3. **Historial y Recurrencia**: Conteo de veces que alcanzó cada fase (`vw_veces_fase_persona`) y ciclos de vida previos.
+4. **Conversaciones**: Mensajería cronológica completa vía WhatsApp (`mensaje_whatsapp`).
+5. **Recomendaciones Emitidas**: Historial de propuestas con respuesta (`oferta_negociacion`).
+6. **Conversión a PAYER**: Primer pago confirmado, pedido asociado, desglose de ítems y saldo pendiente (`pedido`, `pago`, `vw_pedido_saldo`).
+7. **Auditoría**: Acciones comerciales registradas en `dbo.accion_agente`.
+
+### 4. Agente Conversacional IA (`/agente` o `/chat`)
+- **Espacio de Atención en 3 Paneles**:
+  - *Panel Izquierdo*: Directorio de sesiones activas de WhatsApp.
+  - *Panel Central*: Interfaz interactiva de chat con selector de rol (*escribir como cliente* o *responder como asesor*) y sugerencias comerciales automáticas.
+  - *Panel Derecho*: Ficha comercial en vivo del prospecto y botón para aplicar ofertas recomendadas con un solo clic.
+- **Herramientas Controladas**: El modelo opera mediante 12 funciones seguras sin permitir SQL arbitrario.
+- **Español Peruano Contextualizado**: Resuelve dudas sobre puntos de cocción, guarniciones y métodos de pago locales (Yape, Plin).
+
+### 5. Motor de Recomendaciones Personalizadas (`/recomendaciones`)
+- Genera propuestas basadas en los cortes más demandados por segmento (`vw_top_cortes_segmento`) y combos populares (`vw_top_combos_segmento`).
+- Evalúa el historial previo del prospecto para evitar repetir ofertas rechazadas.
+- Permite registrar ofertas interactivamente en `dbo.oferta_negociacion` con estados `ACEPTADA`, `RECHAZADA` o `SIN_RESPUESTA`.
+
+### 6. Seguimiento Inteligente y Prevención de Abandono (`/seguimiento`)
+- Semáforo de atención configurado en 6 intervalos:
+  - `0 – 2 h`: Espera normal.
+  - `2 – 6 h`: Respuesta demorada.
+  - `6 – 24 h`: Posible desinterés.
+  - `24 – 48 h`: Riesgo alto de abandono.
+  - `48 – 72 h`: Negociación inactiva.
+  - `> 72 h`: Inactividad prolongada (Candidato a `TIMEOUT_72H`).
+- Distinción entre desistimiento formal (`RECHAZO`) e inactividad (`TIMEOUT_72H`).
+- Modal de confirmación con supervisión humana antes de asentar un cierre por pérdida.
+
+### 7. Catálogo Comercial Parrillero (`/catalogo`)
+- **Cortes y Platos**: Detalle de porciones en gramos, estilos de preparación y precios unitarios.
+- **Combos Paquetizados**: Desglose de cortes, acompañamientos y bebidas incluidas.
+- **Promociones y Reglas de Validación**: Validador interactivo que evalúa vigencia de fecha, segmento y día permitido (`L,M,X,J,V,S,D`) según la hora oficial de Perú (`America/Lima`).
+
+### 8. Analítica Oficial LEADS (`/analitica`)
+- Reporte formal de la vista `dbo.vw_kpi_mensual`.
+- Tabla comparativa de resultados con granularidad de ciclos por mes de inicio.
+- Umbrales oficiales de rendimiento comercial (Bueno / Regular / Malo).
+
+### 9. Configuración y Monitor de Salud (`/configuracion`)
+- Diagnóstico en tiempo real del pool de conexiones a SQL Server con test de latencia.
+- Indicador del proveedor de IA activo (Gemini API vs Copiloto Heurístico Autónomo).
+- Parámetros comerciales configurables.
+
+---
+
+## 5. Modelo de Datos y Vistas SQL Server V3
+
+El sistema utiliza íntegramente las tablas y vistas provistas en el esquema transaccional `buyer`:
+
+### Vistas Consumidas por la Plataforma:
+| Nombre de la Vista | Utilidad en el Sistema | Módulo Destino |
 |---|---|---|
-| 1 | **Dashboard** | Centro de Inteligencia Comercial. Comparación entre ciclos comerciales y personas únicas, tarjetas de los 3 KPIs oficiales (TCP, TEN, TPN) con rangos Bueno/Regular/Malo, gráficos de evolución mensual, distribución por segmento y efectividad del agente. |
-| 2 | **Gestión de Leads** | CRM comercial con búsqueda en tiempo real, filtros por estado (`ABIERTA`, `CONVERTIDA`, `PERDIDA`) y segmento, ordenación, tiempo sin respuesta y selector rápido de los 6 casos sintéticos de demostración. |
-| 3 | **Perfil 360° del Lead** | Ficha comercial integral con sus 7 secciones: 1) Información personal, 2) Preferencias gastronómicas (`vw_preferencias_persona`), 3) Historial y recurrencia (`vw_veces_fase_persona`), 4) Conversaciones cronológicas, 5) Recomendaciones registradas (`oferta_negociacion`), 6) Conversión / Primer pago confirmado (`pedido`, `pago`), 7) Auditoría del agente (`accion_agente`). |
-| 4 | **Agente IA** | Espacio de atención en 3 paneles: 1) Lista de chats, 2) Conversación interactiva con cliente / copiloto, 3) Contexto del lead, sugerencias comerciales y ofertas recomendadas con registro directo en SQL Server. |
-| 5 | **Recomendaciones** | Motor híbrido basado en cortes más vendidos por segmento (`vw_top_cortes_segmento`), combos más pedidos (`vw_top_combos_segmento`) y promociones vigentes (`vw_promos_vigentes`). Incluye simulador de ofertas con registro de estado `ACEPTADA`, `RECHAZADA` o `SIN_RESPUESTA`. |
-| 6 | **Seguimiento** | Semáforo de tiempos sin respuesta con 6 niveles (0-2h, 2-6h, 6-24h, 24-48h, 48-72h, >72h). Alerta de riesgo de abandono y modal de confirmación humana para registrar cierres por `RECHAZO` o `TIMEOUT_72H`. |
-| 7 | **Catálogo Comercial** | Consulta de productos de la carta (con peso y categoría), combos (con desglose de ítems incluidos) y promociones (con validador interactivo de reglas en vivo para el día de hoy en Trujillo). |
-| 8 | **Analítica LEADS** | Reporte oficial de la vista `dbo.vw_kpi_mensual`, tabla de resultados Octubre vs Noviembre 2026, definiciones de metas y métricas de desempeño del agente comercial. |
-| 9 | **Configuración** | Monitor de salud de SQL Server en vivo (test de conexión, base de datos, puerto 1434, tablas detectadas), estado de la integración de IA, WhatsApp y parámetros comerciales. |
+| `dbo.vw_kpi_mensual` | Agrupación mensual de ciclos, payers, pérdidas y cálculo de TCP, TEN y TPN. | Dashboard / Analítica |
+| `dbo.vw_negociacion_detalle` | Detalle a nivel de ciclo con horas de conversión y primer pago. | Gestión de Leads |
+| `dbo.vw_preferencias_persona` | Favorito declarado en formulario, más comprado y recurrencia. | Perfil 360° / Agente IA |
+| `dbo.vw_top_cortes_segmento` | Ranking de cortes de carne más vendidos (incluyendo dentro de combos). | Recomendaciones |
+| `dbo.vw_top_combos_segmento` | Combos más pedidos por segmento de consumidor. | Recomendaciones / Catálogo |
+| `dbo.vw_promos_vigentes` | Promociones activas filtradas por fecha y día local de Perú. | Recomendaciones / Catálogo |
+| `dbo.vw_veces_fase_persona` | Conteo histórico de recurrencia por fase (`LEAD`, `PAYER`, `CUSTOMER`). | Perfil 360° |
+| `dbo.vw_pedido_saldo` | Control de saldos y verificación de pagos parciales. | Conversión / Perfil 360° |
 
 ---
 
-## 5. Resultados Oficiales de Referencia (Validados en SQL Server V3)
+## 6. Métricas e Indicadores Oficiales (KPIs)
 
-Los resultados obtenidos desde la vista `dbo.vw_kpi_mensual` de la base `buyer` son:
+Los tres indicadores oficiales del negocio se evalúan con estricto rigor analítico:
 
-| Indicador | Octubre 2026 | Noviembre 2026 | Meta Oficial | Estado |
-|---|:---:|:---:|:---:|:---:|
-| **Total Ciclos LEAD** | 7 | 12 | — | Base del embudo |
-| **Payers (Convertidos)** | 6 | 9 | — | 1er pago confirmado |
-| **Pérdidas** | 1 | 1 | — | Rechazo / Timeout 72h |
-| **Negociaciones Abiertas** | 0 | 2 | — | En negociación |
-| **TCP (Tiempo Promedio)** | **39.02 h** | **13.18 h** | $\le 48\text{ h}$ | **Bueno** |
-| **TEN (Tasa de Éxito)** | **85.71 %** | **75.00 %** | $\ge 30\text{ \%}$ | **Bueno** |
-| **TPN (Tasa de Pérdida)** | **14.29 %** | **8.33 %** | $\le 40\text{ \%}$ | **Bueno** |
+### 1. TCP — Tiempo Promedio de Conversión
+Representa el promedio de horas transcurridas desde el ingreso formal a la fase LEAD hasta la confirmación del primer pago:
+$$\text{TCP} = \frac{\sum (\text{Fecha Primer Pago} - \text{Fecha Inicio Lead en Horas})}{\text{Total de Payers}}$$
+- **Meta Oficial**: $\le 48\text{ horas}$
+- **Rangos**: Bueno ($\le 48\text{ h}$) · Regular ($48 - 72\text{ h}$) · Malo ($> 72\text{ h}$)
+
+### 2. TEN — Tasa de Éxito de Negociación
+Porcentaje de ciclos de negociación que culminaron en venta efectiva:
+$$\text{TEN} = \left( \frac{\text{Total de Payers}}{\text{Total de Ciclos Lead}} \right) \times 100$$
+- **Meta Oficial**: $\ge 30\text{ \%}$
+- **Rangos**: Bueno ($\ge 30\text{ \%}$) · Regular ($15\text{ \%} - 30\text{ \%}$) · Malo ($< 15\text{ \%}$)
+
+### 3. TPN — Tasa de Pérdida de Negociación
+Porcentaje de ciclos abandonados por rechazo o inactividad:
+$$\text{TPN} = \left( \frac{\text{Total de Leads Perdidos}}{\text{Total de Ciclos Lead}} \right) \times 100$$
+- **Meta Oficial**: $\le 40\text{ \%}$
+- **Rangos**: Bueno ($\le 40\text{ \%}$) · Regular ($40\text{ \%} - 60\text{ \%}$) · Malo ($> 60\text{ \%}$)
+
+### Resultados Obtenidos desde SQL Server V3:
+| Indicador | Octubre 2026 | Noviembre 2026 | Estado Oficial |
+|---|:---:|:---:|:---:|
+| **Ciclos Totales** | 7 | 12 | — |
+| **Payers Confirmados** | 6 | 9 | — |
+| **Pérdidas Registradas** | 1 | 1 | — |
+| **Negociaciones Abiertas** | 0 | 2 | — |
+| **TCP** | **39.02 h** | **13.18 h** | **Bueno** |
+| **TEN** | **85.71 %** | **75.00 %** | **Bueno** |
+| **TPN** | **14.29 %** | **8.33 %** | **Bueno** |
 
 ---
 
-## 6. Casos Sintéticos para Demostración
+## 7. Casos de Negocio Sintéticos Validados
 
-El sistema incluye acceso directo desde la barra superior y desde el módulo de Leads para los siguientes casos clave:
+El sistema incorpora selectores rápidos en la interfaz para auditar los escenarios clave diseñados en la base de datos:
 
-1. **Ana Ramírez** (`caso=ana`): Cliente recurrente del segmento *Estudiantes*. Registra 3 ciclos de vida:
-   - Ciclo 1: Convertida con descuento estudiante en cortes (TCP 57.35 h).
-   - Ciclo 2: Convertida con Combo Estudiante y torta (TCP 0.72 h).
-   - Ciclo 3: Negociación abierta actualmente en curso.
-2. **Luis Torres** (`caso=luis`): Cliente recurrente del segmento *Familias* con 2 ciclos y reservas familiares atendidas.
-3. **María Paredes** (`caso=maria`): Demuestra que un pago parcial (S/ 60 Yape confirmado y S/ 50 pendiente en caja al recoger) constituye una **conversión a PAYER**.
-4. **Sofía Vargas** (`caso=sofia`): Demuestra una negociación **PERDIDA por RECHAZO** explícito al considerar alto el precio.
-5. **Diego Flores** (`caso=diego`): Demuestra una negociación **PERDIDA por TIMEOUT_72H** tras superar las 72 horas de inactividad.
-6. **Jorge Mendoza** (`caso=jorge`): Negociación **ABIERTA** nueva en curso.
+```
+┌─────────────────┬──────────────┬───────────────┬────────────────────────────────────────────────────────┐
+│ Lead            │ Segmento     │ Estado        │ Hallazgo Comercial Demostrado                          │
+├─────────────────┼──────────────┼───────────────┼────────────────────────────────────────────────────────┤
+│ Ana Ramírez     │ Estudiantes  │ 3 Ciclos      │ Recurrente: 2 compras cerradas + 1 ciclo en curso.     │
+│ Luis Torres     │ Familias     │ 2 Ciclos      │ Recurrente: 2 reservas familiares atendidas.           │
+│ María Paredes   │ Amigos       │ CONVERTIDA    │ Pago parcial: S/60 confirmado (Yape) + S/50 pendiente. │
+│ Sofía Vargas    │ Estudiantes  │ PERDIDA       │ Desistimiento explícito por objeción de precio.        │
+│ Diego Flores    │ Familias     │ PERDIDA       │ Cierre registrado tras superar 72 horas de inactividad. │
+│ Jorge Mendoza   │ Estudiantes  │ ABIERTA       │ Lead nuevo en negociación activa (43 h sin respuesta). │
+└─────────────────┴──────────────┴───────────────┴────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 7. Instrucciones de Configuración y Ejecución
+## 8. Motor de Inteligencia Artificial y Reglas de Promociones
 
-### Requisitos Previos
-- Node.js v18+ (recomendado Node.js v22).
-- Microsoft SQL Server en ejecución con la base de datos `buyer` cargada (usando `01_CREAR_BD_EL_ESTABLO_V3.sql` y `02_LLENAR_BD_EL_ESTABLO_V3.sql`).
+### Arquitectura del Agente Copiloto:
+- **Herramientas de Consulta Controladas**: La IA no tiene acceso libre a la consola SQL; en su lugar invoca funciones de backend que devuelven estructuras JSON predefinidas.
+- **Manejo de Objeciones**: Ante objeciones de costo (*"me parece caro"*, *"cocinaré en casa"*), el agente explica el rendimiento de los 350 g de carne importada y ofrece alternativas directas como el **Combo Estudiante (S/ 39.00)** o el **15% de descuento en cortes**.
+- **Memoria Comercial**: Registra cada interacción en `dbo.mensaje_whatsapp` y cada oferta en `dbo.oferta_negociacion`.
 
-### Variables de Entorno (`.env.local`)
-Crear el archivo `.env.local` en la raíz (se incluye plantilla en `.env.example`):
+### Reglas de Validación de Promociones (Hora Oficial Perú: `America/Lima`):
+Antes de que una promoción sea recomendada al cliente, el motor (`src/lib/promotions-engine.ts`) comprueba:
+1. Que el indicador `activa` sea `1`.
+2. Que la fecha actual en Perú se encuentre entre `fecha_inicio` y `fecha_fin`.
+3. Que el día de la semana (`L,M,X,J,V,S,D`) coincida con los días permitidos.
+4. Que el prospecto pertenezca al `id_segmento_objetivo`.
+5. En promociones como la *Promo Cumpleañero*, verifica que la fecha de nacimiento esté en la ventana de cumpleaños ($\pm 3\text{ días}$).
+6. Que no se aplique más de una promoción por pedido.
+
+---
+
+## 9. Instalación y Puesta en Marcha
+
+### Requisitos Previos:
+- **Node.js**: Versión 18 o superior (Probado en Node.js v22.19.0).
+- **Microsoft SQL Server**: 2019 o superior con la base de datos `buyer` cargada con los scripts provistos en `/sql`.
+
+### 1. Clonar el Repositorio
+```bash
+git clone https://github.com/Prolexis/establo-ai-leads.git
+cd establo-ai-leads
+```
+
+### 2. Configurar Variables de Entorno
+Copia el archivo de plantilla a `.env.local`:
+```bash
+cp .env.example .env.local
+```
+
+Verifica la configuración de conexión a tu base de datos:
 ```env
-# Conexión a Microsoft SQL Server (Base: buyer)
 DB_SERVER=127.0.0.1
 DB_PORT=1434
 DB_NAME=buyer
@@ -124,51 +284,87 @@ DB_PASSWORD=EstabloLeads2026!
 DB_TRUST_SERVER_CERTIFICATE=true
 DB_TRUSTED_CONNECTION=false
 
-# Inteligencia Artificial (Gemini)
-# Opcional: Si se deja vacío opera el Copiloto Heurístico Experto V3 offline
+# Opcional: API Key de Google Gemini (si está vacía, opera en modo heurístico experto)
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-1.5-flash
 
-# Zona Horaria Comercial
 TZ=America/Lima
-
-# WhatsApp Integración (Simulador activo)
 WHATSAPP_DEMO_MODE=true
-WHATSAPP_TOKEN=
-WHATSAPP_PHONE_NUMBER_ID=
-WHATSAPP_VERIFY_TOKEN=establo_ai_webhook_secret_2026
 ```
 
-### Comandos de Puesta en Marcha
+### 3. Instalar Dependencias
+```bash
+npm install
+```
 
-1. **Instalación de Dependencias**:
-   ```bash
-   npm install
-   ```
+### 4. Compilar y Ejecutar en Producción
+```bash
+npm run build
+npm run start
+```
 
-2. **Compilación de Producción**:
-   ```bash
-   npm run build
-   ```
+La aplicación estará lista y accesible en:  
+👉 **`http://localhost:3001`**
 
-3. **Iniciar Servidor Web**:
-   ```bash
-   npm run start
-   ```
-   *La aplicación estará disponible de inmediato en [http://localhost:3001](http://localhost:3001)*.
-
-4. **Modo Desarrollo (Opcional)**:
-   ```bash
-   npm run dev
-   ```
+*(Para ejecutar en modo desarrollo con recarga en caliente: `npm run dev -- -p 3001`)*
 
 ---
 
-## 8. Seguridad y Calidad del Software
+## 10. Estructura del Proyecto
 
-- **SQL Parametrizado**: Todas las consultas a SQL Server utilizan parámetros fuertemente tipados (`sql.BigInt`, `sql.VarChar`, `sql.NVarChar`), eliminando vectores de inyección SQL.
-- **Protección de Datos Personales**: Los números telefónicos y correos se muestran dentro del contexto del CRM para operadores autorizados.
-- **Auditoría Transaccional**: Toda acción del agente comercial se audita en la tabla `dbo.accion_agente`.
-- **Confirmación Humana**: Las operaciones sensibles como el cierre de una negociación por abandono o rechazo exigen validación humana obligatoria.
-- **Manejo Centralizado de Errores**: Códigos de estado HTTP estandarizados y mensajes amigables para el usuario.
+```
+establo-ai-leads/
+├── .env.example              # Plantilla de variables de entorno seguras
+├── .gitignore                # Reglas de exclusión para credenciales y temporales
+├── README.md                 # Documentación técnica y académica integral
+├── package.json              # Definición de dependencias y scripts de ejecución
+├── tsconfig.json             # Configuración del compilador TypeScript
+├── tailwind.config.ts        # Sistema de diseño con tokens de modo claro y oscuro
+├── sql/                      # Scripts oficiales de la base de datos SQL Server
+│   ├── 01_CREAR_BD_EL_ESTABLO_V3.sql
+│   └── 02_LLENAR_BD_EL_ESTABLO_V3.sql
+└── src/
+    ├── types/
+    │   └── database.ts       # Modelos TypeScript de tablas, vistas y payloads
+    ├── lib/
+    │   ├── db.ts             # Conexión singleton y consultas parametrizadas
+    │   ├── ai-agent.ts       # Agente IA, herramientas y copiloto conversacional
+    │   ├── promotions-engine.ts # Validador estricto de promociones en Trujillo
+    │   └── utils.ts          # Formateadores de moneda (S/), porcentajes y horas
+    ├── components/
+    │   ├── theme-provider.tsx# Manejador de Modo Claro / Oscuro sin parpadeo
+    │   └── layout/
+    │       ├── app-layout.tsx# Contenedor responsive con navegación adaptativa
+    │       ├── navbar.tsx    # Barra superior con selector de Casos de Prueba
+    │       └── sidebar.tsx   # Menú lateral con los 9 módulos de la fase LEADS
+    └── app/
+        ├── layout.tsx        # Layout principal de Next.js
+        ├── globals.css       # Estilos globales y paleta parrillera premium
+        ├── page.tsx          # Módulo 1: Dashboard (Centro de Inteligencia Comercial)
+        ├── leads/            # Módulo 2 y 3: Gestión de Leads CRM y Perfil 360°
+        ├── agente/           # Módulo 4: Agente Conversacional Copiloto
+        ├── chat/             # Módulo complementario de Mensajería WhatsApp
+        ├── recomendaciones/  # Módulo 5: Motor de Recomendaciones Gastronómicas
+        ├── seguimiento/      # Módulo 6: Seguimiento y Semáforo de Abandono (72h)
+        ├── catalogo/         # Módulo 7: Catálogo Comercial y Promociones
+        ├── analitica/        # Módulo 8: Analítica de KPIs Oficiales (TCP, TEN, TPN)
+        ├── configuracion/    # Módulo 9: Monitor de Salud de SQL Server
+        └── api/              # Endpoints RESTful para consumo de datos
+```
 
+---
+
+## 11. Seguridad y Buenas Prácticas
+
+- **Cero Inyección SQL**: Todas las interacciones con SQL Server emplean parámetros fuertemente tipados a través del driver nativo `mssql`.
+- **Aislamiento de Secretos**: Ninguna clave de base de datos ni token de API se expone en el código fuente. El archivo `.env.local` está estrictamente ignorado por `.gitignore`.
+- **Auditoría Transaccional**: Cada recomendación y acción emitida por el asesor inteligente se persiste de forma permanente en la tabla `dbo.accion_agente`.
+- **Integridad Referencial**: Respeta las llaves foráneas circulares entre `negociacion` y `pedido` mediante validaciones de estado en el backend.
+- **Diseño Ergonómico y Accesible**: Cumple con estándares de contraste en modo claro y modo oscuro, con tipografía clara y sin elementos decorativos que carezcan de función operativa.
+
+---
+
+<p align="center">
+  <b>ESTABLO AI</b> — Desarrollado para <b>Parrilladas El Establo</b> (Trujillo, Perú)<br />
+  <i>Escuela Profesional de Ingeniería de Sistemas · Universidad Nacional de Trujillo</i>
+</p>
