@@ -69,22 +69,22 @@ function LeadsCRMContent() {
       {/* Cabecera */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <h1 className="text-2xl md:text-3xl font-extrabold text-[#241E1A] dark:text-[#F5F3F0] font-display">
               Gestión Comercial de Leads
             </h1>
-            <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-[#C96D35]/15 text-[#C96D35] dark:text-[#E8A46D] border border-[#C96D35]/30">
+            <span className="px-2.5 py-0.5 text-xs font-bold rounded-md bg-[#C96D35]/15 text-[#C96D35] dark:text-[#E8A46D] border border-[#C96D35]/30">
               CRM Parrillero
             </span>
           </div>
-          <p className="text-sm text-[#746B65] dark:text-[#B3ACA5] mt-1">
+          <p className="text-xs md:text-sm text-[#746B65] dark:text-[#B3ACA5] mt-1">
             Seguimiento de negociaciones, historial de contacto y conversión de leads en Trujillo.
           </p>
         </div>
 
         {/* Acceso a casos de prueba */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-[#746B65] dark:text-[#B3ACA5]">Demostración:</span>
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#FFFFFF] dark:bg-[#1D2023] border border-[#E8E0D8] dark:border-[#383C40] shadow-xs">
+          <span className="text-[11px] font-bold text-[#746B65] dark:text-[#B3ACA5] px-2">Casos:</span>
           {["ana", "luis", "maria", "sofia", "diego", "jorge"].map((c) => (
             <button
               key={c}
@@ -93,8 +93,8 @@ function LeadsCRMContent() {
               }}
               className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors capitalize ${
                 casoSeleccionado === c
-                  ? "bg-[#C96D35] text-white shadow-sm"
-                  : "bg-[#FFFFFF] dark:bg-[#1D2023] border border-[#E8E0D8] dark:border-[#383C40] text-[#746B65] dark:text-[#B3ACA5] hover:text-[#C96D35]"
+                  ? "bg-[#C96D35] text-white shadow-xs"
+                  : "text-[#746B65] dark:text-[#B3ACA5] hover:text-[#C96D35]"
               }`}
             >
               {c}
@@ -103,9 +103,9 @@ function LeadsCRMContent() {
           {casoSeleccionado && (
             <button
               onClick={() => setCasoSeleccionado("")}
-              className="text-xs text-rose-500 font-bold hover:underline ml-1"
+              className="text-xs text-rose-500 font-bold hover:underline px-2"
             >
-              Limpiar
+              ×
             </button>
           )}
         </div>

@@ -90,18 +90,20 @@ export default function SeguimientoPage() {
   return (
     <div className="space-y-6">
       {/* Cabecera */}
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[#241E1A] dark:text-[#F5F3F0] font-display">
-            Seguimiento Inteligente y Gestión de Abandono
-          </h1>
-          <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-[#C96D35]/15 text-[#C96D35] dark:text-[#E8A46D] border border-[#C96D35]/30">
-            Regla 72 Horas
-          </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-[#241E1A] dark:text-[#F5F3F0] font-display">
+              Seguimiento y Gestión de Abandono
+            </h1>
+            <span className="px-2.5 py-0.5 text-xs font-bold rounded-md bg-[#C96D35]/15 text-[#C96D35] dark:text-[#E8A46D] border border-[#C96D35]/30">
+              Regla 72 Horas
+            </span>
+          </div>
+          <p className="text-xs md:text-sm text-[#746B65] dark:text-[#B3ACA5] mt-1">
+            Monitoreo preventivo de negociaciones abiertas para evitar leads desatendidos.
+          </p>
         </div>
-        <p className="text-sm text-[#746B65] dark:text-[#B3ACA5] mt-1">
-          Monitoreo de negociaciones abiertas para evitar clientes desatendidos y registrar cierres autorizados por RECHAZO o TIMEOUT_72H.
-        </p>
       </div>
 
       {/* Explicación de la Política de Seguimiento */}
