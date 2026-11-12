@@ -40,25 +40,27 @@ export default function RecomendacionesPage() {
   // Cargar datos panorámicos de recomendaciones y catálogo oficial
   const fetchData = async () => {
     try {
-      const [resRec, resLeads, resCat] = await Promise.all([
-        fetch("/api/recommendations"),
-        fetch("/api/leads"),
-        fetch("/api/catalog"),
-      ]);
+      // Cargar secuencialmente para evitar contención en el pool SQL Server
+      const resCat = await fetch("/api/catalog").catch(() => null);
+      if (resCat?.ok) {
+        const jsonCat = await resCat.json();
+        if (jsonCat?.success) setCatalogoData(jsonCat);
+      }
 
-      const [jsonRec, jsonLeads, jsonCat] = await Promise.all([
-        resRec.json(),
-        resLeads.json(),
-        resCat.json(),
-      ]);
+      const resRec = await fetch("/api/recommendations").catch(() => null);
+      if (resRec?.ok) {
+        const jsonRec = await resRec.json();
+        if (jsonRec?.success) setData(jsonRec);
+      }
 
-      if (jsonRec.success) setData(jsonRec);
-      if (jsonCat.success) setCatalogoData(jsonCat);
-
-      if (jsonLeads.success && jsonLeads.leads) {
-        setLeads(jsonLeads.leads);
-        if (jsonLeads.leads.length > 0) {
-          setLeadSeleccionado(jsonLeads.leads[0]);
+      const resLeads = await fetch("/api/leads").catch(() => null);
+      if (resLeads?.ok) {
+        const jsonLeads = await resLeads.json();
+        if (jsonLeads?.success && jsonLeads.leads) {
+          setLeads(jsonLeads.leads);
+          if (jsonLeads.leads.length > 0) {
+            setLeadSeleccionado(jsonLeads.leads[0]);
+          }
         }
       }
     } catch (err) {
