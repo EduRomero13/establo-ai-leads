@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.github
+*.log
+.env*.local
+README.md
+docs
+policies
+scripts

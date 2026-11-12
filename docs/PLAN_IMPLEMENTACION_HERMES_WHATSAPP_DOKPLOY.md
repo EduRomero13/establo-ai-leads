@@ -174,3 +174,4 @@ volumes:
 2. **Fase 2 (Completada):** Eliminación de modos simulados, envío de WhatsApp real por trabajadores en Seguimiento y Ranking de Cierres de Venta por Vendedor.
 3. **Fase 3 (Siguiente):** Exposición del Endpoint MCP (`/api/mcp`) para conectar Hermes Agent mediante JSON-RPC / HTTP.
 4. **Fase 4 (Siguiente):** Creación del directorio de políticas Markdown (`policies/`) y contenedor Docker para Dokploy.
+

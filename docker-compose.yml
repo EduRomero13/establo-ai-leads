@@ -1,0 +1,27 @@
+services:
+  establo-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: establo-backend-crm
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_SERVER=${DB_SERVER:-host.docker.internal}
+      - DB_PORT=${DB_PORT:-1434}
+      - DB_NAME=${DB_NAME:-buyer}
+      - DB_USER=${DB_USER:-buyer_app}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_ENCRYPT=${DB_ENCRYPT:-false}
+      - DB_TRUST_SERVER_CERTIFICATE=${DB_TRUST_SERVER_CERTIFICATE:-true}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID:-1469947252866426}
+      - WHATSAPP_BUSINESS_ACCOUNT_ID=${WHATSAPP_BUSINESS_ACCOUNT_ID}
+      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-establo_ai_webhook_secret_2026}
+      - WHATSAPP_API_VERSION=${WHATSAPP_API_VERSION:-v21.0}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

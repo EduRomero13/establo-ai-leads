@@ -450,7 +450,7 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
   // ===================================================================
   // 3. IDENTIDAD DEL AGENTE / "¿ERES UNA IA / BOT / HUMANO?"
   // ===================================================================
-  const esPreguntaIdentidad = /eres (una? )?(ia|bot|humano|robot|inteligencia)|qui[eé]n (habla|eres)|con qui[eé]n hablo|c[oó]mo te llamas/i.test(mensajeNorm);
+  const esPreguntaIdentidad = /eres (una? )?(ia|bot|humano|robot|inteligencia)|qui[eé]n (habla|eres)|con qui[eé]n hablo|c[oó]mo te llamas|quien me atiende/i.test(mensajeNorm);
   if (esPreguntaIdentidad) {
     return {
       mensaje: `¡Hola, ${nombreCliente}! 🤖🥩 Soy el Agente Inteligente oficial de Parrilladas El Establo en Trujillo, conectado en tiempo real a nuestra base de datos SQL Server y cocina a la leña.\nMi trabajo es ayudarte al instante a elegir los mejores cortes según tu gusto, calcular combos y procesar tu pedido sin demoras. ¿Qué corte a la brasa te gustaría disfrutar hoy? 🔥📲`,
@@ -464,9 +464,9 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
   }
 
   // ===================================================================
-  // 4. PREGUNTAS FUERA DE TEMA (FÚTBOL, POLÍTICA, CULTURA GENERAL, ETC.)
+  // 4. PREGUNTAS FUERA DE TEMA (FÚTBOL, POLÍTICA, CULTURA GENERAL, IA GENERAL, ETC.)
   // ===================================================================
-  const esFueraDeTema = /real madrid|barcelona|alianza|cristal|f[uú]tbol|partido|champions|messi|ronaldo|presidente|pol[ií]tica|elecciones|congreso|descubri[oó]|capital de|cu[aá]nto es|2\s*\+\s*2|poema|chiste|clima|temperatura|d[oó]lar/i.test(mensajeNorm);
+  const esFueraDeTema = /real madrid|barcelona|alianza|cristal|f[uú]tbol|partido|champions|messi|ronaldo|presidente|pol[ií]tica|elecciones|congreso|descubri[oó]|capital de|cu[aá]nto es|2\s*\+\s*2|poema|chiste|clima|temperatura|d[oó]lar|quien gan[oó]|qui[eé]n gan[oó]|cancion|canci[oó]n|filosof|historia del mundo/i.test(mensajeNorm);
   if (esFueraDeTema) {
     return {
       mensaje: `¡Buena esa, ${nombreCliente}! 😄 Sea en el fútbol, el estudio o el día a día cada quien tiene su favorito, ¡pero el verdadero campeón indiscutible siempre se sirve en nuestra parrilla a la leña! 🔥🥩\nPara que disfrutes como se debe: ¿te preparamos una jugosa *Picaña (S/ 39.00)*, una *Tira de Cerdo (S/ 32.00)* o un *Combo Amigos (S/ 110.00)*? ¡Pagas al toque con Yape! 📲✨`,
@@ -486,7 +486,223 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
   }
 
   // ===================================================================
-  // 5. PREGUNTAS OPERATIVAS (HORARIOS, DIETAS, RESERVAS, BEBIDAS)
+  // 5. UBICACIÓN EXACTA Y DIRECCIÓN DEL LOCAL
+  // ===================================================================
+  const esUbicacion = /d[oó]nde est[aá]n|d[oó]nde queda|d[oó]nde se ubican|ubicaci[oó]n|direcci[oó]n|c[oó]mo llegar|en qu[eé] parte|d[oó]nde est[aá] el local|d[oó]nde los encuentro|croquis|mapa/i.test(mensajeNorm);
+  if (esUbicacion) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! 📍 Nuestro restaurante principal está ubicado en pleno corazón de Trujillo:\n🏠 *Av. Víctor Larco Herrera 1245, Trujillo* (a pocas cuadras del óvalo Larco).\nTambién contamos con cocina central para despachos delivery rápidos y calientes a toda la ciudad 🛵🔥.\n¿Nos visitas hoy en el salón o prefieres que te enviemos tu parrillada a domicilio? 📲`,
+      sugerenciasComerciales: [
+        "Pedir delivery a domicilio 🛵",
+        "Reservar mesa en el local 🍽️",
+        "Ver carta de cortes disponibles 🥩",
+      ],
+      accionTomada: "Información veraz de ubicación del local",
+    };
+  }
+
+  // ===================================================================
+  // 6. TIEMPO DE DEMORA Y LOGÍSTICA DE DELIVERY
+  // ===================================================================
+  const esTiempoDemora = /cu[aá]nto demora|tiempo de entrega|tiempo estimado|cu[aá]nto tarda|demora el delivery|a qu[eé] hora llega|demoran mucho/i.test(mensajeNorm);
+  if (esTiempoDemora) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! ⏱️🛵 Nuestros pedidos a la leña demoran entre *30 a 45 minutos* como máximo.\nSalen recién retirados de las brasas y viajan en empaques térmicos sellados para que te lleguen hirviendo, crujientes y jugosos 🔥🥩.\n¿A qué dirección te lo enviamos? ¡Pásame tu pedido y lo ponemos a la brasa al instante! 📲`,
+      sugerenciasComerciales: [
+        "Confirmar dirección de envío 📍",
+        "Pedir Combo Amigos (S/ 110.00) 👥",
+        "Pagar con Yape al toque 📲",
+      ],
+      accionTomada: "Aclaración precisa de tiempo de entrega delivery",
+    };
+  }
+
+  // ===================================================================
+  // 7. COSTO DE DELIVERY Y COBERTURA (ZONAS, HUANCHACO, EL GOLF, ETC.)
+  // ===================================================================
+  const esCostoCobertura = /cu[aá]nto (cuesta|cobran|sale) el delivery|costo de env[ií]o|precio del delivery|cobertura|llegan a|huanchaco|v[ií]ctor larco|el golf|california|moche|laredo|la esperanza/i.test(mensajeNorm);
+  if (esCostoCobertura) {
+    return {
+      mensaje: `¡Llegamos a tu zona, ${nombreCliente}! 🛵🔥\n🛵 *Costo de delivery*: S/ 5.00 para Trujillo urbano, California y Víctor Larco (S/ 8.00 para Huanchaco o zonas periféricas).\n🎉 *¡PROMO DELIVERY!*: ¡Por pedidos desde *S/ 80.00* tu envío te sale totalmente GRATIS! 🎁\n¿A qué dirección exacta te enviamos tu parrillada? 📲✨`,
+      sugerenciasComerciales: [
+        "Aprovechar delivery gratis (+S/ 80) 🎁",
+        "Confirmar dirección de entrega 🛵",
+        "Ver combos parrillero 🥩",
+      ],
+      accionTomada: "Información de costo de delivery y cobertura por zonas",
+    };
+  }
+
+  // ===================================================================
+  // 8. CHIMICHURRI, SALSAS, CREMAS Y GUARNICIONES
+  // ===================================================================
+  const esSalsasGuarniciones = /chimichurri|salsas?|cremas?|aj[ií]|rocoto|vinagreta|papas r[uú]sticas|ensalada fresca|qu[eé] incluye/i.test(mensajeNorm);
+  if (esSalsasGuarniciones) {
+    return {
+      mensaje: `¡Por supuesto, ${nombreCliente}! 🤤 En El Establo *todos* nuestros platos y cortes vienen completos:\n✨ Porción abundante de papitas rústicas doradas 🥔\n✨ Ensalada parrillera fresca con vinagreta artesanal 🥗\n✨ Nuestro famoso *chimichurri parrillero de la casa* y ají criollo en salseros sellados 🌶️🔥.\n¿Deseas guarnición extra o te mandamos a preparar tu corte favorito? 📲`,
+      sugerenciasComerciales: [
+        `¿Sale una Picaña a la Parrilla 350g (S/ 39.00)? 🥩`,
+        `¿Sale una Tira de Cerdo 350g (S/ 32.00)? 🔥`,
+        `¿Agregar guarnición extra de papas rústicas? 🥔`,
+      ],
+      accionTomada: "Aclaración detallada de salsas y guarniciones incluidas",
+    };
+  }
+
+  // ===================================================================
+  // 9. TÉRMINO DE COCCIÓN DE LA CARNE (TÉRMINO MEDIO, 3/4, BIEN COCIDO)
+  // ===================================================================
+  const esTerminoCarne = /t[eé]rmino|cocci[oó]n|tres cuartos|t[eé]rmino medio|bien cocid|jugos[oa]|a qu[eé] punto/i.test(mensajeNorm);
+  if (esTerminoCarne) {
+    return {
+      mensaje: `¡Al punto exacto que a ti te guste, ${nombreCliente}! 🥩🔥\nNuestros maestros parrilleros dominan cada término al carbón de algarrobo:\n🔴 *Término Medio*: centro rojo jugoso y suave.\n🟠 *Tres Cuartos (3/4)*: el preferido de la casa, sellado perfecto con centro rosado jugoso.\n🟤 *Bien Cocido*: dorado parejo y bien asado sin perder sabor.\n¿En qué término te preparamos tu corte? 🤤📲`,
+      sugerenciasComerciales: [
+        "Término 3/4 (Recomendado de la casa) 🥩",
+        "Término Medio (Súper jugoso) 🔥",
+        "Bien cocido 👍",
+      ],
+      accionTomada: "Asesoramiento profesional sobre términos de cocción cárnica",
+    };
+  }
+
+  // ===================================================================
+  // 10. LIBRO DE RECLAMACIONES Y GARANTÍA COMERCIAL
+  // ===================================================================
+  const esLibroReclamaciones = /libro de reclamacion|reclamaciones|queja|indecopi|reclamar/i.test(mensajeNorm);
+  if (esLibroReclamaciones) {
+    return {
+      mensaje: `¡Por supuesto, ${nombreCliente}! 📖 Conforme a la normativa de INDECOPI, contamos con Libro de Reclamaciones físico en nuestro local y virtual disponible para todos nuestros clientes.\nAdemás, en El Establo tenemos *Garantía de Satisfacción 100%*: si algo no está a tu gusto, te lo solucionamos de inmediato 🥩🤝.\n¿Tuviste algún inconveniente o deseas realizar un pedido? 📲`,
+      sugerenciasComerciales: [
+        "Atención personalizada con encargado",
+        "Ver carta de cortes a la leña",
+      ],
+      accionTomada: "Respuesta formal y transparente sobre libro de reclamaciones",
+    };
+  }
+
+  // ===================================================================
+  // 11. COMIDA NO PARRILLERA (POLLO A LA BRASA, CHIFA, PIZZA, CEVICHE)
+  // ===================================================================
+  const esComidaNoParrillera = /pollo a la brasa|venden pollo|tienen pollo|chifa|arroz chaufa|pizza|hamburguesa|ceviche|cebiche|marisco|pescado/i.test(mensajeNorm);
+  if (esComidaNoParrillera) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! 🥩🔥 En El Establo somos un templo especializado 100% en *Carnes y Parrilladas a la Leña de Algarrobo* (cortes finos de res de 350g, tierna tira de cerdo y chorizos parrilleros).\nNo vendemos pollo a la brasa comercial ni chifa, ¡pero te aseguro que un corte a la brasa con papitas rústicas y chimichurri te dejará fascinado! 🤤\n¿Te animas por una jugosa *Picaña (S/ 39.00)* o *Tira de Cerdo (S/ 32.00)*? 📲`,
+      sugerenciasComerciales: [
+        `¿Sale una Picaña a la Parrilla (S/ 39.00)? 🥩`,
+        `¿Sale una Tira de Cerdo (S/ 32.00)? 🔥`,
+        `¿Sale un Chorizo Parrillero (S/ 15.00)? 🌭`,
+      ],
+      accionTomada: "Diferenciación de especialidad de la carta frente a comida rápida",
+    };
+  }
+
+  // ===================================================================
+  // 12. CHORIZO PICANTE / ALERGIAS / CONDIMENTOS
+  // ===================================================================
+  const esPreguntaIngredientes = /chorizo.*picante|pica el chorizo|es picante|muy picante|tiene aj[ií]|alergia|gluten|condimento/i.test(mensajeNorm);
+  if (esPreguntaIngredientes) {
+    return {
+      mensaje: `¡Para nada, ${nombreCliente}! 🥩 Nuestros chorizos criollos son artesanales y tienen una sazón suave y aromática a finas hierbas, *cero picantes* y aptos para toda la familia y niños 👍.\nLos ajíes criollos y chimichurris picantitos van siempre en salseros por separado para que tú le des el toque que más te guste 🌶️.\n¿Te mandamos a dorar un chorizo a la brasa? ¡Solo S/ 15.00 con papas y ensalada! 📲✨`,
+      sugerenciasComerciales: [
+        `¿Sale el Chorizo a la Parrilla (S/ 15.00)? 🌭`,
+        `¿Prefieres la Picaña 350g (S/ 39.00)? 🥩`,
+        `¿Confirmas con Yape? 📲`,
+      ],
+      accionTomada: "Aclaración de ingredientes y nivel de picor del chorizo",
+    };
+  }
+
+  // ===================================================================
+  // 13. MEDIOS DE PAGO Y CONTRAENTREGA
+  // ===================================================================
+  const esPreguntaPago = /contraentrega|contra entrega|pagar al recibir|efectivo|yape|plin|tarjeta|transferencia|con qu[eé] puedo pagar|medios? de pago|c[oó]mo pago/i.test(mensajeNorm);
+  if (esPreguntaPago) {
+    return {
+      mensaje: `¡Al toque, ${nombreCliente}! 📲 Facilitamos tu pago al 100%:\n📱 *Yape y Plin*: pago digital inmediato.\n💳 *Tarjetas*: aceptamos Visa, Mastercard y débito.\n💵 *Contraentrega*: puedes pagar en efectivo o por Yape al repartidor cuando recibas tu pedido caliente en tu puerta 🛵🔥.\n¿Con qué medio te resulta más cómodo pagar hoy? 🥩`,
+      sugerenciasComerciales: [
+        "Pagar con Yape / Plin al instante 📲",
+        "Pagar en efectivo contraentrega 💵",
+        "Pagar con tarjeta de crédito/débito 💳",
+      ],
+      accionTomada: "Presentación completa y clara de métodos de pago autorizados",
+    };
+  }
+
+  // ===================================================================
+  // 14. COMPROBANTES DE PAGO: BOLETA, FACTURA Y RUC
+  // ===================================================================
+  const esComprobante = /boleta|factura|ruc|comprobante|raz[oó]n social/i.test(mensajeNorm);
+  if (esComprobante) {
+    return {
+      mensaje: `¡Por supuesto, ${nombreCliente}! 📄 Emitimos *Boleta de Venta* electrónica y *Factura con RUC* para empresas de forma automática.\nSolo nos envías tu número de DNI o RUC con la razón social al confirmar tu pedido y te enviamos el PDF al WhatsApp 📑✨.\n¿Qué cortes o combos te facturamos hoy? 🥩📲`,
+      sugerenciasComerciales: [
+        "Solicitar Boleta electrónica 🧾",
+        "Solicitar Factura con RUC 🏢",
+        "Confirmar pedido parrillero 🥩",
+      ],
+      accionTomada: "Garantía de comprobantes tributarios formales",
+    };
+  }
+
+  // ===================================================================
+  // 15. TÁPERS Y EMPAQUES PARA LLEVAR (¿COBRAN TÁPER?)
+  // ===================================================================
+  const esEmpaque = /t[aá]per|cobran t[aá]per|empaque|descartable|para llevar|caja/i.test(mensajeNorm);
+  if (esEmpaque) {
+    return {
+      mensaje: `¡Cero costo extra, ${nombreCliente}! 📦🔥 En El Establo los empaques térmicos sellados de alta densidad van *totalmente incluidos sin costo adicional*.\nGarantizan que tu carne, guarniciones y papitas lleguen humeantes y perfectas a tu mesa como si estuvieras en el local 🥩✨.\n¿Qué parrillada te empacamos hoy? 📲`,
+      sugerenciasComerciales: [
+        `¿Sale la Parrilla Familiar (S/ 149.00)? 👨‍👩‍👧‍👦`,
+        `¿Sale el Combo Amigos (S/ 110.00)? 👥`,
+        `¿Sale la Picaña 350g (S/ 39.00)? 🥩`,
+      ],
+      accionTomada: "Aclaración sobre gratuidad de empaques térmicos",
+    };
+  }
+
+  // ===================================================================
+  // 16. PREGUNTAS SOBRE EL DUEÑO, HISTORIA Y DIFERENCIAL
+  // ===================================================================
+  const esDiferencialDuenio = /qui[eé]n es el due[nñ]o|de qui[eé]n es|por qu[eé].*(comprar|elegir|preferir|ustedes|el establo)|qu[eé] los diferencia|por qu[eé] son mejores|por qu[eé] deber[ií]a|competencia/i.test(mensajeNorm);
+  if (esDiferencialDuenio) {
+    return {
+      mensaje: `¡Parrilladas El Establo es tradición trujillana a la leña, ${nombreCliente}! 🥩🔥 Fundada por apasionados maestros parrilleros, nos diferenciamos por:\n1️⃣ Leña 100% de algarrobo que brinda un aroma ahumado único.\n2️⃣ Cortes madurados de 350g reales, suaves y jugosos.\n3️⃣ Guarnición abundante de papas rústicas y ensalada fresca incluida.\n4️⃣ Entregas calientes en menos de 45 minutos ⏱️.\n¡Haz la prueba hoy y siente la diferencia! ¿Qué corte te marchamos? 📲`,
+      sugerenciasComerciales: [
+        `¿Sale una Picaña a la Parrilla (S/ 39.00)? 🥩`,
+        `¿Sale una Tira de Cerdo (S/ 32.00)? 🔥`,
+        `¿Pagas con Yape al toque? 📲`,
+      ],
+      accionTomada: "Presentación de propuesta de valor y origen empresarial",
+    };
+  }
+
+  // ===================================================================
+  // 17. SERVICIOS DEL LOCAL: COCHERA, PET-FRIENDLY, WIFI
+  // ===================================================================
+  if (/estacionamiento|cochera|parqueo|donde cuadrar/i.test(mensajeNorm)) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! 🚗🅿️ Sí, en nuestro local de Av. Larco contamos con *estacionamiento privado vigilado gratuito* para la comodidad de todos nuestros comensales.\n¿Nos visitas hoy para disfrutar de las mejores carnes al carbón? 🥩🔥`,
+      sugerenciasComerciales: [
+        "Reservar mesa en el local 🍽️",
+        "Ver carta de cortes disponibles 🥩",
+      ],
+      accionTomada: "Información de estacionamiento del local",
+    };
+  }
+
+  if (/pet friendly|mascota|perro|gato/i.test(mensajeNorm)) {
+    return {
+      mensaje: `¡Totalmente, ${nombreCliente}! 🐾🥩 Nuestra terraza parrillera es *100% Pet-Friendly*, así que tu engreído de 4 patas es más que bienvenido a acompañarte.\n¿Te reservamos una mesa en la terraza para hoy? 📲`,
+      sugerenciasComerciales: [
+        "Reservar en terraza pet-friendly 🐕",
+        "Ver carta de cortes a la leña 🥩",
+      ],
+      accionTomada: "Aclaración política pet-friendly",
+    };
+  }
+
+  // ===================================================================
+  // 18. HORARIOS DE ATENCIÓN
   // ===================================================================
   if (/horario|a qu[eé] hora (abren|cierran|atienden)|atienden hoy|abierto hoy|hasta qu[eé] hora/i.test(mensajeNorm)) {
     return {
@@ -500,6 +716,9 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
     };
   }
 
+  // ===================================================================
+  // 18. DIETAS VEGETARIANAS O MARISCOS
+  // ===================================================================
   if (/vegetari|vegan|no como carne|pescado|ceviche|cebiche|mariscos/i.test(mensajeNorm)) {
     return {
       mensaje: `¡Hola, ${nombreCliente}! 🥩 Nuestra pasión y especialidad son 100% las carnes finas a la leña (res, cerdo y chorizos artesanales). Si buscas una alternativa fresca, tenemos nuestra deliciosa *Ensalada César (S/ 18.00)*, papas rústicas doradas y bebidas naturales como Chicha Morada (S/ 12.00) 🥗✨.\n¿Te gustaría probarlas o prefieres ver la carta parrillera? 🔥`,
@@ -518,6 +737,9 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
     };
   }
 
+  // ===================================================================
+  // 19. RESERVAS Y EVENTOS
+  // ===================================================================
   if (/reserva|reservar|cumplea[nñ]os|evento|reuni[oó]n|fiesta|grupo grande/i.test(mensajeNorm)) {
     return {
       mensaje: `¡Claro que sí, ${nombreCliente}! 🎉 Celebramos cumpleaños y reuniones con la mejor parrilla de Trujillo.\nPodemos prepararte banquetes completos como la *Parrilla Familiar (S/ 149.00)* o *Combo Amigos (S/ 110.00)* con atención preferencial 🥩🥳.\n¿Para cuántas personas sería y para qué fecha lo estás planificando? 📲`,
@@ -530,6 +752,9 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
     };
   }
 
+  // ===================================================================
+  // 20. BEBIDAS Y LICORES
+  // ===================================================================
   if (/cerveza|vino|sangr[ií]a|chicha|gaseosa|bebida|trago|licor/i.test(mensajeNorm)) {
     return {
       mensaje: `¡Salud, ${nombreCliente}! 🍷 Para acompañar tus carnes al carbón tenemos nuestra refrescante jarra de *Sangría de 1L (S/ 22.00)*, *Chicha Morada de 1L (S/ 12.00)*, cervezas bien frías y gaseosas ❄️🍻.\n¿Te agregamos una jarra a tu pedido? 🥩`,
@@ -549,7 +774,7 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
   }
 
   // ===================================================================
-  // 6. AGRADECIMIENTOS Y DESPEDIDAS CORTESES
+  // 21. AGRADECIMIENTOS Y DESPEDIDAS CORTESES
   // ===================================================================
   if (/^(gracias|muchas gracias|te agradezco|mil gracias|chau|adi[oó]s|hasta luego|nos vemos|buenas noches|buenos d[ií]as|buenas tardes)/i.test(mensajeNorm.trim())) {
     return {
@@ -563,21 +788,24 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
   }
 
   // ===================================================================
-  // 7. GIBBERISH / MENSAJES SIN SENTIDO O SOLO SÍMBOLOS
+  // 22. GIBBERISH / TECLAZO / MENSAJES SIN SENTIDO O RANDOM STRINGS
   // ===================================================================
-  const soloLetras = mensajeNorm.replace(/[^a-záéíóú]/gi, '');
-  const esGibberish = (soloLetras.length >= 4 && !/[aeiouáéíóú]/i.test(soloLetras)) ||
+  const soloLetrasLimpias = mensajeNorm.replace(/[^a-záéíóú]/gi, '');
+  const esTeclazoPatron = /(?:asdf|sdfg|dfgh|fghj|ghjk|hjkl|jklñ|qwer|wert|erty|rtyu|tyui|yuio|uiop|zxcv|xcvb|cvbn|vbnm|1234|2345|3456|4567|5678|6789|asda|sada|dasd)/i.test(mensajeNorm);
+  const esGibberish = esTeclazoPatron ||
+                      (soloLetrasLimpias.length >= 4 && !/[aeiouáéíóú]/i.test(soloLetrasLimpias)) ||
                       /^([^a-zA-Z0-9]+)$/.test(mensajeNorm.trim()) ||
                       /(.)\1{4,}/.test(mensajeNorm.trim());
+
   if (esGibberish) {
     return {
-      mensaje: `¡Hola, ${nombreCliente}! 🥩🔥 Parece que tu mensaje llegó con un poquito de humo de la parrilla 😄.\n¿Deseas que te muestre los cortes a la leña, los combos para compartir o nuestras promociones de hoy? ¡Dime qué se te antoja y te atiendo al toque! 📲✨`,
+      mensaje: `¡Hola, ${nombreCliente}! 🥩🔥 Parece que tu mensaje llegó con un poquito de humo de la parrilla o se cruzaron los dedos en el teclado 😄.\nComo asesor parrillero de El Establo, estoy aquí para mostrarte nuestros cortes finos a la leña, combos para compartir o promociones del día. ¿Qué se te antoja disfrutar hoy? 📲✨`,
       sugerenciasComerciales: [
         "Ver cortes a la brasa 🥩",
         "Ver combos para compartir 👥",
         "Consultar promociones 🎉",
       ],
-      accionTomada: "Manejo amigable de texto no legible / sin sentido",
+      accionTomada: "Manejo amigable y profesional de texto no legible / sin sentido",
     };
   }
 
@@ -1148,7 +1376,23 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
   }
 
   // CASO 6: Consulta de Cortes / Precios / Carta
-  if (mensajeNorm.includes("corte") || mensajeNorm.includes("carta") || mensajeNorm.includes("precio") || mensajeNorm.includes("cuanto cuesta") || mensajeNorm.includes("a cuanto sale") || mensajeNorm.includes("menu")) {
+  if (
+    mensajeNorm.includes("corte") ||
+    mensajeNorm.includes("carta") ||
+    mensajeNorm.includes("precio") ||
+    mensajeNorm.includes("cuanto cuesta") ||
+    mensajeNorm.includes("a cuanto sale") ||
+    mensajeNorm.includes("menu") ||
+    mensajeNorm.includes("menú") ||
+    mensajeNorm.includes("que tienen") ||
+    mensajeNorm.includes("qué tienen") ||
+    mensajeNorm.includes("que venden") ||
+    mensajeNorm.includes("qué venden") ||
+    mensajeNorm.includes("que platos") ||
+    mensajeNorm.includes("qué platos") ||
+    mensajeNorm.includes("que ofrecen") ||
+    mensajeNorm.includes("qué ofrecen")
+  ) {
     return {
       mensaje: `¡Hola, ${nombreCliente}! 🔥 Lo más pedido hoy a la leña:\n🥩 *Chorizo*: *S/ 15.00* | *Tira de Cerdo*: *S/ 32.00* | *Combo Amigos*: *S/ 110.00*\nTodos con papitas y ensalada 🤤. ¿Cuál te mandamos a preparar? 📲`,
       sugerenciasComerciales: [
