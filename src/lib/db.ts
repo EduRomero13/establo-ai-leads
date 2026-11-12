@@ -3,12 +3,17 @@ import sql from "mssql";
 let pool: sql.ConnectionPool | null = null;
 
 export function getDbConfig(): sql.config {
+  const password = process.env.DB_PASSWORD;
+  if (!password) {
+    throw new Error("[SQL Server] Falta la variable de entorno DB_PASSWORD.");
+  }
+
   return {
     server: process.env.DB_SERVER || "127.0.0.1",
     port: parseInt(process.env.DB_PORT || "1434", 10),
     database: process.env.DB_NAME || "buyer",
     user: process.env.DB_USER || "establo_app",
-    password: process.env.DB_PASSWORD || "EstabloLeads2026!",
+    password,
     options: {
       encrypt: false,
       trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE !== "false",

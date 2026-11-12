@@ -5,11 +5,16 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
-      MSSQL_PID: Developer
+      MSSQL_PID: Express
     volumes:
       - mssql-data:/var/opt/mssql
-    networks:
-      - establo-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks: [establo-network]
 
   app:
     build:
@@ -18,8 +23,7 @@ services:
       args:
         NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
     restart: unless-stopped
-    expose:
-      - "3000"
+    expose: ["3000"]
     environment:
       NODE_ENV: production
       DB_SERVER: database
@@ -29,17 +33,22 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
       WHAPI_TOKEN: ${WHAPI_TOKEN:?Define WHAPI_TOKEN}
       WHAPI_API_URL: https://gate.whapi.cloud
-      WHAPI_WEBHOOK_SECRET: ${WHAPI_WEBHOOK_SECRET:-}
+      WHAPI_WEBHOOK_TOKEN: ${WHAPI_WEBHOOK_TOKEN:?Define WHAPI_WEBHOOK_TOKEN}
+      HERMES_API_URL: ${HERMES_API_URL:-}
+      HERMES_API_KEY: ${HERMES_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
       TZ: America/Lima
     depends_on:
-      - database
-    networks:
-      - establo-network
+      database:
+        condition: service_healthy
+    networks: [establo-network, dokploy-network]
 
 networks:
   establo-network:
     driver: bridge
+  dokploy-network:
+    external: true
 
 volumes:
   mssql-data:

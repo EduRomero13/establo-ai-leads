@@ -7,12 +7,19 @@ import {
   mapearTipoMensaje,
 } from "@/lib/whatsapp-service";
 
+export const dynamic = "force-dynamic";
+
 function validarTokenWhapi(request: NextRequest): boolean {
-  const expectedSecret = (process.env.WHAPI_WEBHOOK_SECRET || process.env.WHATSAPP_VERIFY_TOKEN || "").trim();
+  const expectedSecret = (
+    process.env.WHAPI_WEBHOOK_TOKEN ||
+    process.env.WHAPI_WEBHOOK_SECRET ||
+    process.env.WHATSAPP_VERIFY_TOKEN ||
+    ""
+  ).trim();
   if (!expectedSecret) {
     // En producción sin secreto configurado, rechazar por seguridad (fail-closed)
     if (process.env.NODE_ENV === "production") {
-      console.error("[Webhook Whapi] WHAPI_WEBHOOK_SECRET / WHATSAPP_VERIFY_TOKEN no configurado en producción.");
+      console.error("[Webhook Whapi] WHAPI_WEBHOOK_TOKEN no configurado en producción.");
       return false;
     }
     return true;
@@ -44,21 +51,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const payload = await request.json();
+    let payload: any;
+    try {
+      payload = await request.json();
+    } catch {
+      return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+    }
 
     // Whapi envía diferentes tipos de eventos. Nos interesan los mensajes.
     // Estructura típica: { messages: [ { id, from, body, type, ... } ] }
-    if (payload.messages && Array.isArray(payload.messages)) {
+    if (payload?.messages && Array.isArray(payload.messages)) {
       for (const msg of payload.messages) {
         // Evitar procesar mensajes propios (salientes) para prevenir bucles
         if (msg.from_me) continue;
 
-        const chatId = msg.chat_id || msg.from || "";
-        if (!chatId) continue;
+        const chatId = String(msg.chat_id || msg.from || "");
+        if (!chatId || chatId.endsWith("@g.us")) continue; // Ignorar grupos
 
         const eventId = `whapi_${msg.id}`;
         const { esDuplicado, idEvento } = await registrarEventoIntegracion(
-          "WHAPI",
+          "WHATSAPP",
           eventId,
           "MENSAJE_ENTRANTE"
         );
