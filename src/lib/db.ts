@@ -44,15 +44,42 @@ export async function executeQuery<T = any>(
   queryText: string,
   params: Record<string, { type: any; value: any }> = {}
 ): Promise<T[]> {
-  const p = await getDbPool();
-  const request = p.request();
+  try {
+    const p = await getDbPool();
+    const request = p.request();
 
-  for (const [key, { type, value }] of Object.entries(params)) {
-    request.input(key, type, value);
+    for (const [key, { type, value }] of Object.entries(params)) {
+      request.input(key, type, value);
+    }
+
+    const result = await request.query<T>(queryText);
+    return result.recordset;
+  } catch (err: any) {
+    // Si la conexión se reinició o cayó, cerrar pool viejo y reintentar de inmediato
+    if (
+      err?.code === 'ESOCKET' ||
+      err?.message?.includes('Connection lost') ||
+      err?.message?.includes('ECONNRESET') ||
+      !pool?.connected
+    ) {
+      console.warn("[SQL Server] Conexión caída/reset, reconectando pool automáticamente...");
+      try {
+        if (pool) {
+          await pool.close().catch(() => {});
+        }
+      } catch {}
+      pool = null;
+
+      const newPool = await getDbPool();
+      const retryReq = newPool.request();
+      for (const [key, { type, value }] of Object.entries(params)) {
+        retryReq.input(key, type, value);
+      }
+      const retryRes = await retryReq.query<T>(queryText);
+      return retryRes.recordset;
+    }
+    throw err;
   }
-
-  const result = await request.query<T>(queryText);
-  return result.recordset;
 }
 
 export async function checkDbHealth(): Promise<{

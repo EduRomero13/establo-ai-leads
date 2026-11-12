@@ -10,12 +10,12 @@ import {
   Bot,
   Flame,
   ClockAlert,
-  UtensilsCrossed,
-  LineChart,
   Settings,
   Sparkles,
   X,
   BadgeCheck,
+  FlaskConical,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,22 +26,22 @@ interface SidebarProps {
 
 export const navigationItems = [
   {
-    name: "Dashboard",
+    name: "Inicio",
     href: "/",
     icon: LayoutDashboard,
-    badge: "Oficial",
+    badge: null,
   },
   {
-    name: "Gestión de Leads",
+    name: "Leads",
     href: "/leads",
     icon: Users,
     badge: null,
   },
   {
-    name: "Conversaciones",
+    name: "WhatsApp",
     href: "/chat",
     icon: MessageSquare,
-    badge: "WhatsApp",
+    badge: "Live",
   },
   {
     name: "Agente IA",
@@ -50,10 +50,10 @@ export const navigationItems = [
     badge: "Copiloto",
   },
   {
-    name: "Recomendaciones",
-    href: "/recomendaciones",
-    icon: Flame,
-    badge: null,
+    name: "Laboratorio IA",
+    href: "/laboratorio",
+    icon: FlaskConical,
+    badge: "10 Casos",
   },
   {
     name: "Seguimiento",
@@ -62,16 +62,10 @@ export const navigationItems = [
     badge: "72h",
   },
   {
-    name: "Catálogo Comercial",
-    href: "/catalogo",
-    icon: UtensilsCrossed,
-    badge: null,
-  },
-  {
-    name: "Analítica LEADS",
-    href: "/analitica",
-    icon: LineChart,
-    badge: "KPIs",
+    name: "Resultados",
+    href: "/recomendaciones",
+    icon: TrendingUp,
+    badge: "Catálogo",
   },
   {
     name: "Configuración",

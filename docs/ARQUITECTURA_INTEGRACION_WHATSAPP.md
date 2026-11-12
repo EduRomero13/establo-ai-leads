@@ -109,3 +109,4 @@ Los indicadores comerciales mostrados en `/` y `/analitica` provienen de `dbo.vw
 - **Histórico Consolidado (19 Ciclos Totales):**
   - Total Payers: **15** | Total Pérdidas: **2**
   - **TCP Ponderado:** `23.5 h` | **TEN:** `78.95%` | **TPN:** `10.53%`
+

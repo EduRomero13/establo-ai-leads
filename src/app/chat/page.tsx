@@ -117,21 +117,16 @@ export default function ConversacionesInboxPage() {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Cabecera del Módulo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-[#241E1A] dark:text-[#F5F3F0] font-display">
-              Bandeja de Conversaciones
-            </h1>
-            <span className="px-2.5 py-0.5 text-xs font-bold rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-              WhatsApp Omnicanal
-            </span>
-          </div>
-          <p className="text-xs md:text-sm text-[#746B65] dark:text-[#B3ACA5] mt-1">
-            Bandeja comercial centralizada para atender, supervisar y responder mensajes de clientes en tiempo real.
-          </p>
+    <div className="space-y-4">
+      {/* Cabecera Minimalista */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl md:text-2xl font-extrabold text-[#241E1A] dark:text-[#F5F3F0] font-display">
+            WhatsApp
+          </h1>
+          <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+            En vivo
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -140,23 +135,23 @@ export default function ConversacionesInboxPage() {
               fetchSesiones();
               if (sesionSeleccionada) fetchMensajes(sesionSeleccionada.id_sesion);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#FFFFFF] dark:bg-[#1D2023] border border-[#E8E0D8] dark:border-[#383C40] hover:text-[#C96D35] transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#FFFFFF] dark:bg-[#1D2023] border border-[#E8E0D8] dark:border-[#383C40] hover:text-[#C96D35] transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Refrescar</span>
+            <span className="hidden sm:inline">Refrescar</span>
           </button>
           <Link
             href="/agente"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#C96D35] hover:bg-[#B65F29] text-white transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#C96D35] hover:bg-[#B65F29] text-white transition-colors"
           >
-            <span>Abrir con Copiloto IA</span>
+            <span>Modo Agente</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </div>
 
       {/* Grid Principal: Bandeja (Lista) + Visor de Conversación */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-230px)] min-h-[550px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-12rem)] min-h-[550px]">
         {/* Columna Izquierda: Lista de Chats (4 cols) */}
         <div className="lg:col-span-5 xl:col-span-4 flex flex-col rounded-2xl bg-[#FFFFFF] dark:bg-[#1D2023] border border-[#E8E0D8] dark:border-[#383C40] shadow-xs overflow-hidden">
           {/* Barra de búsqueda y filtros */}

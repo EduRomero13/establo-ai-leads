@@ -48,6 +48,36 @@ export interface MetaWebhookPayload {
 }
 
 // =========================================================================
+// MAPEO CENTRALIZADO DE TIPOS DE MENSAJE (SQL Server V3 - CHECK constraint dbo.mensaje_whatsapp.tipo)
+// Admite únicamente: 'TEXTO' | 'BOTONES' | 'INTERACTIVO' | 'IMAGEN' | 'OTRO'
+// =========================================================================
+
+export type TipoMensajeValidoSQL = 'TEXTO' | 'BOTONES' | 'INTERACTIVO' | 'IMAGEN' | 'OTRO';
+
+export function mapearTipoMensaje(tipoOriginal?: string | null): TipoMensajeValidoSQL {
+  if (!tipoOriginal) return 'TEXTO';
+  const normalizado = tipoOriginal.trim().toLowerCase();
+  switch (normalizado) {
+    case 'text':
+    case 'texto':
+      return 'TEXTO';
+    case 'button':
+    case 'button_reply':
+    case 'botones':
+      return 'BOTONES';
+    case 'interactive':
+    case 'interactivo':
+    case 'list_reply':
+      return 'INTERACTIVO';
+    case 'image':
+    case 'imagen':
+      return 'IMAGEN';
+    default:
+      return 'OTRO';
+  }
+}
+
+// =========================================================================
 // 1. SEGURIDAD: VALIDACIÓN DE FIRMA X-Hub-Signature-256
 // =========================================================================
 
@@ -108,13 +138,16 @@ export async function registrarEventoIntegracion(
     });
 
     if (existente && existente.length > 0) {
-      return { esDuplicado: true, idEvento: existente[0].id_evento };
+      if (existente[0].estado !== 'ERROR') {
+        return { esDuplicado: true, idEvento: existente[0].id_evento };
+      }
+      return { esDuplicado: false, idEvento: existente[0].id_evento };
     }
 
     // Registrar nuevo evento
     const insertQuery = `
       INSERT INTO dbo.evento_integracion (proveedor, id_evento_externo, tipo, recibido_en, estado)
-      VALUES (@proveedor, @idEventoExterno, @tipo, SYSUTCDATETIME(), 'PENDIENTE');
+      VALUES (@proveedor, @idEventoExterno, @tipo, SYSUTCDATETIME(), 'RECIBIDO');
       SELECT SCOPE_IDENTITY() AS id_evento;
     `;
     const res = await executeQuery<{ id_evento: number }>(insertQuery, {
@@ -141,7 +174,7 @@ export async function marcarEventoProcesado(idEvento: number, error?: string) {
     `;
     await executeQuery(updateQuery, {
       idEvento: { type: sql.BigInt, value: idEvento },
-      estado: { type: sql.VarChar(15), value: error ? 'FALLIDO' : 'PROCESADO' },
+      estado: { type: sql.VarChar(15), value: error ? 'ERROR' : 'PROCESADO' },
       error: { type: sql.NVarChar(300), value: error ? error.substring(0, 300) : null },
     });
   } catch (err) {
@@ -157,9 +190,9 @@ export async function enviarMensajeWhatsAppOficial(params: {
   telefonoDestino: string; // ej "51948834920"
   texto: string;
 }): Promise<{ success: boolean; wamid?: string; error?: string }> {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const version = process.env.WHATSAPP_API_VERSION || "v21.0";
+  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const version = process.env.WHATSAPP_API_VERSION?.trim() || "v21.0";
   const isDemo = process.env.WHATSAPP_DEMO_MODE === "true" || !token || token.trim() === "";
 
   if (isDemo) {
@@ -171,11 +204,14 @@ export async function enviarMensajeWhatsAppOficial(params: {
   }
 
   try {
+    const telDigits = params.telefonoDestino.replace(/\D/g, "");
+    const toPhone = telDigits.startsWith("51") ? telDigits : `51${telDigits}`;
+
     const url = `https://graph.facebook.com/${version}/${phoneId}/messages`;
     const payload = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
-      to: params.telefonoDestino.startsWith("51") ? params.telefonoDestino : `51${params.telefonoDestino}`,
+      to: toPhone,
       type: "text",
       text: { preview_url: false, body: params.texto },
     };
@@ -183,7 +219,7 @@ export async function enviarMensajeWhatsAppOficial(params: {
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json; charset=utf-8",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
@@ -270,6 +306,7 @@ export async function procesarMensajeEntranteMeta(params: {
   }
 
   // 3. Registrar mensaje entrante en dbo.mensaje_whatsapp
+  const tipoMapeadoEntrante = mapearTipoMensaje(params.tipo);
   const insertMensaje = `
     INSERT INTO dbo.mensaje_whatsapp (id_sesion, wamid, direccion, tipo, contenido, opcion_seleccionada, fecha_mensaje, estado_entrega)
     VALUES (@idSesion, @wamid, 'ENTRANTE', @tipo, @contenido, @opcion, SYSUTCDATETIME(), 'RECIBIDO');
@@ -278,7 +315,7 @@ export async function procesarMensajeEntranteMeta(params: {
   const resMsg = await executeQuery<{ id_mensaje: number }>(insertMensaje, {
     idSesion: { type: sql.BigInt, value: idSesion },
     wamid: { type: sql.VarChar(200), value: params.wamid },
-    tipo: { type: sql.VarChar(20), value: params.tipo || 'TEXTO' },
+    tipo: { type: sql.VarChar(20), value: tipoMapeadoEntrante },
     contenido: { type: sql.NVarChar(sql.MAX), value: params.contenido },
     opcion: { type: sql.VarChar(50), value: params.opcionSeleccionada || null },
   });
@@ -314,9 +351,12 @@ export async function procesarMensajeEntranteMeta(params: {
   // 5. Tarea asíncrona desacoplada: Generar respuesta inteligente del Agente IA
   // Si no está registrado como LEAD, invitar cordial al formulario de captación sin inventar negociación
   if (!persona || !idNegociacion) {
-    const textoNoLead = `¡Hola! Bienvenido a Parrilladas El Establo en Trujillo 🥩🔥. 
-Para poder atenderte de forma personalizada y ofrecerte nuestras promociones exclusivas, por favor completa rápidamente nuestro formulario de bienvenida aquí: https://elestablo.pe/captacion 
-¡Enseguida nuestro asesor parrillero te atenderá con los mejores cortes!`;
+    const textoNoLead = `¡Hola! Bienvenido a Parrilladas El Establo 🥩🔥
+
+Para darte promociones exclusivas y asesorarte a tu gusto, regístrate en segundos aquí:
+👉 https://elestablo.pe/captacion
+
+¡Apenas lo envíes, nuestro asesor te atenderá con los mejores cortes a la leña! 🤤🚀`;
 
     const envio = await enviarMensajeWhatsAppOficial({
       telefonoDestino: params.remitenteRaw,
@@ -326,10 +366,11 @@ Para poder atenderte de forma personalizada y ofrecerte nuestras promociones exc
     if (envio.success) {
       await executeQuery(
         `INSERT INTO dbo.mensaje_whatsapp (id_sesion, wamid, direccion, tipo, contenido, fecha_mensaje, estado_entrega)
-         VALUES (@idSesion, @wamid, 'SALIENTE', 'TEXTO', @contenido, SYSUTCDATETIME(), 'ENVIADO');`,
+         VALUES (@idSesion, @wamid, 'SALIENTE', @tipo, @contenido, SYSUTCDATETIME(), 'ENVIADO');`,
         {
           idSesion: { type: sql.BigInt, value: idSesion },
           wamid: { type: sql.VarChar(200), value: envio.wamid || null },
+          tipo: { type: sql.VarChar(20), value: mapearTipoMensaje('TEXTO') },
           contenido: { type: sql.NVarChar(sql.MAX), value: textoNoLead },
         }
       );
@@ -352,10 +393,11 @@ Para poder atenderte de forma personalizada y ofrecerte nuestras promociones exc
     if (envio.success) {
       await executeQuery(
         `INSERT INTO dbo.mensaje_whatsapp (id_sesion, wamid, direccion, tipo, contenido, fecha_mensaje, estado_entrega)
-         VALUES (@idSesion, @wamid, 'SALIENTE', 'TEXTO', @contenido, SYSUTCDATETIME(), 'ENVIADO');`,
+         VALUES (@idSesion, @wamid, 'SALIENTE', @tipo, @contenido, SYSUTCDATETIME(), 'ENVIADO');`,
         {
           idSesion: { type: sql.BigInt, value: idSesion },
           wamid: { type: sql.VarChar(200), value: envio.wamid || null },
+          tipo: { type: sql.VarChar(20), value: mapearTipoMensaje('TEXTO') },
           contenido: { type: sql.NVarChar(sql.MAX), value: respuestaAgente.mensaje },
         }
       );

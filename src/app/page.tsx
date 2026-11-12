@@ -194,14 +194,14 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl md:text-3xl font-extrabold text-[#241E1A] dark:text-[#F5F3F0] font-display tracking-tight">
-              Centro de Inteligencia Comercial
+              Tus LEADS, de un vistazo
             </h1>
             <span className="px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider rounded-md bg-[#C96D35]/15 text-[#C96D35] dark:text-[#E8A46D] border border-[#C96D35]/30">
               Fase LEADS
             </span>
           </div>
           <p className="text-xs md:text-sm text-[#746B65] dark:text-[#B3ACA5] mt-1">
-            Supervisión del embudo, efectividad de conversión y control del Agente IA en Parrilladas El Establo.
+            Supervisión del embudo comercial, conversión y control del Agente IA.
           </p>
         </div>
 
@@ -265,7 +265,7 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#746B65] dark:text-[#B3ACA5]">
-                  TCP — Tiempo de Conversión
+                  TCP · Conversión promedio
                 </p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <h3 className="text-3xl font-extrabold text-[#241E1A] dark:text-[#F5F3F0] font-display">
@@ -279,7 +279,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-xs text-[#746B65] dark:text-[#B3ACA5] mt-2">
-              Horas desde primer contacto hasta el 1er pago
+              Horas transcurridas hasta el 1er pago confirmado
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-[#E8E0D8] dark:border-[#383C40] flex items-center justify-between text-xs">
@@ -296,7 +296,7 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#746B65] dark:text-[#B3ACA5]">
-                  TEN — Tasa de Éxito
+                  TEN · Tasa de éxito
                 </p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <h3 className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-display">
@@ -312,7 +312,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-xs text-[#746B65] dark:text-[#B3ACA5] mt-2">
-              Conversiones de Lead a Payer con pago confirmado
+              Conversiones logradas de Lead a Payer
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-[#E8E0D8] dark:border-[#383C40] flex items-center justify-between text-xs">
@@ -329,7 +329,7 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#746B65] dark:text-[#B3ACA5]">
-                  TPN — Tasa de Pérdida
+                  TPN · Tasa de pérdida
                 </p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <h3 className="text-3xl font-extrabold text-rose-600 dark:text-rose-400 font-display">
@@ -345,7 +345,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-xs text-[#746B65] dark:text-[#B3ACA5] mt-2">
-              Leads cerrados por rechazo o inactividad de 72h
+              Negociaciones perdidas (rechazo o inactividad 72h)
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-[#E8E0D8] dark:border-[#383C40] flex items-center justify-between text-xs">

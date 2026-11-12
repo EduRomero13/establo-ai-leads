@@ -5,6 +5,7 @@ import {
   marcarEventoProcesado,
   procesarMensajeEntranteMeta,
   actualizarEstadoMensajeMeta,
+  mapearTipoMensaje,
   MetaWebhookPayload,
 } from "@/lib/whatsapp-service";
 
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
             for (const msg of val.messages) {
               const eventId = `msg_${msg.id}`;
               const { esDuplicado, idEvento } = await registrarEventoIntegracion(
-                "WHATSAPP_CLOUD",
+                "WHATSAPP",
                 eventId,
                 "MENSAJE_ENTRANTE"
               );
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
                 remitenteRaw: msg.from,
                 nombreContacto: contactName,
                 contenido: contenidoTexto,
-                tipo: msg.type.toUpperCase(),
+                tipo: mapearTipoMensaje(msg.type),
                 opcionSeleccionada,
               })
                 .then(() => {
