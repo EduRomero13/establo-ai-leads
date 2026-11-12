@@ -196,13 +196,13 @@ export default function RecomendacionesPage() {
       {/* ========================================================================= */}
       {tabVista === "recomendaciones" && (
         <div className="space-y-8 animate-in fade-in duration-200">
-          {/* SECCIÓN 1: Simulador Interactivo de Recomendación por Lead */}
+          {/* SECCIÓN 1: Recomendación Comercial Inteligente por Lead */}
           <div className="p-6 rounded-2xl bg-[#FFFFFF] dark:bg-[#1D2023] border border-[#E8E0D8] dark:border-[#383C40] shadow-sm space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#E8E0D8] dark:border-[#383C40]">
               <div>
                 <h3 className="font-extrabold text-base text-[#241E1A] dark:text-[#F5F3F0] flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-[#C96D35]" />
-                  <span>Simulador Comercial de Recomendación Personalizada</span>
+                  <span>Recomendación Comercial Inteligente por Lead</span>
                 </h3>
                 <p className="text-xs text-[#746B65] dark:text-[#B3ACA5]">
                   Selecciona un lead real de SQL Server para calcular su propuesta de valor personalizada y registrar ofertas en dbo.oferta_negociacion.

@@ -44,7 +44,6 @@ function AgenteIAContent() {
   const [mensajes, setMensajes] = useState<any[]>([]);
   const [cargandoMensajes, setCargandoMensajes] = useState(false);
   const [nuevoMensaje, setNuevoMensaje] = useState("");
-  const [modoEscritura, setModoEscritura] = useState<"agente" | "lead">("agente");
   const [enviarWhatsAppReal, setEnviarWhatsAppReal] = useState(true);
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
@@ -175,17 +174,16 @@ function AgenteIAContent() {
     setEnviando(true);
 
     try {
-      const direccion = modoEscritura === "lead" ? "ENTRANTE" : "SALIENTE";
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id_sesion: sesionSeleccionada.id_sesion,
           id_negociacion: sesionSeleccionada.id_negociacion,
-          direccion,
+          direccion: "SALIENTE",
           contenido: texto,
-          enviarWhatsAppReal: direccion === "SALIENTE" ? enviarWhatsAppReal : false,
-          autoResponder: modoEscritura === "lead",
+          enviarWhatsAppReal: true,
+          autoResponder: false,
         }),
       });
 
@@ -398,26 +396,11 @@ function AgenteIAContent() {
               </div>
             </div>
 
-            {/* Alternador Asesor / Cliente */}
-            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-[#292D31] p-0.5 rounded-lg text-[10px] font-bold">
-              <button
-                type="button"
-                onClick={() => setModoEscritura("agente")}
-                className={`px-2 py-1 rounded-md transition-colors ${
-                  modoEscritura === "agente" ? "bg-[#C96D35] text-white shadow-2xs" : "text-[#746B65]"
-                }`}
-              >
-                Agente IA
-              </button>
-              <button
-                type="button"
-                onClick={() => setModoEscritura("lead")}
-                className={`px-2 py-1 rounded-md transition-colors ${
-                  modoEscritura === "lead" ? "bg-[#42291F] text-white shadow-2xs" : "text-[#746B65]"
-                }`}
-              >
-                Cliente
-              </button>
+            {/* Canal y Modo Asesor */}
+            <div className="flex items-center gap-1.5">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#C96D35]/15 text-[#C96D35] border border-[#C96D35]/30">
+                Asesor Comercial (Saliente)
+              </span>
             </div>
           </div>
 
@@ -488,7 +471,7 @@ function AgenteIAContent() {
             <div className="flex items-center gap-1.5">
               <input
                 type="text"
-                placeholder={modoEscritura === "agente" ? "Escribe o usa el Copiloto..." : "Escribe como cliente..."}
+                placeholder="Escribe una respuesta o pulsa Copiloto para sugerencia..."
                 value={nuevoMensaje}
                 onChange={(e) => setNuevoMensaje(e.target.value)}
                 disabled={enviando}
@@ -516,19 +499,12 @@ function AgenteIAContent() {
               </button>
             </div>
 
-            {modoEscritura === "agente" && (
-              <div className="flex items-center justify-between text-[10px] px-1 text-[#746B65]">
-                <label className="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enviarWhatsAppReal}
-                    onChange={(e) => setEnviarWhatsAppReal(e.target.checked)}
-                    className="rounded text-[#C96D35] focus:ring-[#C96D35]"
-                  />
-                  <span>Enviar a WhatsApp móvil del cliente</span>
-                </label>
-              </div>
-            )}
+            <div className="flex items-center justify-between text-[10px] px-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Conectado a WhatsApp Cloud API (Envío Real)
+              </span>
+            </div>
           </form>
         </div>
 

@@ -33,7 +33,7 @@ export async function GET() {
           : "Modo Demostración Inteligente Autónomo (Heurístico con Reglas de Negocio V3)",
       },
       whatsapp: {
-        modo: process.env.WHATSAPP_DEMO_MODE === "false" ? "API Cloud Oficial" : "Simulador Comercial Integrado",
+        modo: process.env.WHATSAPP_DEMO_MODE === "false" ? "API Cloud Oficial" : "Motor Comercial El Establo",
         webhookVerificado: true,
         canalNegociacion: "sesion_whatsapp + mensaje_whatsapp",
       },

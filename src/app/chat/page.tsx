@@ -90,6 +90,7 @@ export default function ConversacionesInboxPage() {
           id_negociacion: sesionSeleccionada.id_negociacion,
           direccion: "SALIENTE",
           contenido: texto,
+          enviarWhatsAppReal: true,
           autoResponder: false,
         }),
       });

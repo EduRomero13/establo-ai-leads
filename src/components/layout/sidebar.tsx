@@ -50,22 +50,16 @@ export const navigationItems = [
     badge: "Copiloto",
   },
   {
-    name: "Laboratorio IA",
-    href: "/laboratorio",
-    icon: FlaskConical,
-    badge: "10 Casos",
-  },
-  {
     name: "Seguimiento",
     href: "/seguimiento",
     icon: ClockAlert,
     badge: "72h",
   },
   {
-    name: "Resultados",
+    name: "Carta y Combos",
     href: "/recomendaciones",
     icon: TrendingUp,
-    badge: "Catálogo",
+    badge: "Carta",
   },
   {
     name: "Configuración",
