@@ -401,6 +401,186 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
   const tieneHistorial = historialPrevio.length > 0;
   const favDeclarado = preferencias?.producto_favorito_declarado || recomendaciones?.preferencias?.producto_favorito_declarado;
 
+  // ===================================================================
+  // 1. ESCUDO DE SEGURIDAD / DE-ESCALACIÓN ANTE AGRESIONES O TROLEO
+  // ===================================================================
+  const esAgresion = /estafad|estafa|ladron|malo|fea|feo|asco|porqueria|porquería|basura|mierda|pendejo/i.test(mensajeNorm);
+  if (esAgresion) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! En El Establo nos tomamos muy en serio la calidad de cada corte y la satisfacción de nuestros comensales 🥩🤝.\nSi tuviste algún inconveniente o duda con tu pedido, cuéntame para solucionarlo de inmediato y darte la experiencia parrillera que mereces. ¿En qué te podemos servir hoy? 📲`,
+      sugerenciasComerciales: [
+        "Brindar soporte inmediato al cliente",
+        "Ofrecer cambio de producto o cortesía",
+      ],
+      accionTomada: "De-escalación cortés y profesional ante queja/provocación",
+    };
+  }
+
+  // ===================================================================
+  // 2. DEMANDA DE CORTES MÁS CAROS / PREMIUM / TENGO DINERO (HIGH TICKET)
+  // ===================================================================
+  const esInteresPremium = /m[aá]s caro|los m[aá]s caros|el m[aá]s caro|lo m[aá]s caro|corte.*caro|tengo dinero|tengo plata|sin l[ií]mite|presupuesto alto|corte.*premium|cortes.*premium|lo mejor que tengas|lo m[aá]s fino|corte fino|lo m[aá]s top|lo m[aá]s exclusivo|angus/i.test(mensajeNorm);
+  if (esInteresPremium) {
+    try {
+      await toolRegistrarNecesidadLead(idNegociacion, "Cortes Premium / Alto Presupuesto", 1, 149.0);
+      await toolRegistrarOfertaLead(idNegociacion, {
+        idProducto: 5, // Parrilla Mixta Especial (S/ 58.00)
+        detalle: "Oferta de opciones premium y de mayor valor de la carta",
+      });
+    } catch (e) {}
+
+    return {
+      mensaje: `¡Excelente, ${nombreCliente}! 🥩👑 Si buscas lo más selecto y de mayor nivel de la casa, te recomendamos:\n✨ *Parrilla Familiar* (*S/ 149.00*): nuestro banquete cumbre con cuadril premium, chuletas y chorizos artesanales.\n✨ *Parrilla Mixta Especial* (*S/ 58.00*): el plato individual más completo con variedad de carnes al carbón de algarrobo.\n✨ *Picaña a la Parrilla 350g* (*S/ 39.00*) o *Bife Ancho 350g* (*S/ 38.00*): cortes importados a término perfecto.\n¿Cuál de estos cortes selectos te mandamos a la brasa? ¡Pagas al toque con Yape o tarjeta! 📲✨`,
+      sugerenciasComerciales: [
+        `¿Marchamos la Parrilla Familiar (S/ 149.00)? 👑`,
+        `¿Marchamos la Parrilla Mixta Especial (S/ 58.00)? 🥩`,
+        `¿Prefieres la Picaña a la Parrilla 350g (S/ 39.00)? 🔥`,
+      ],
+      ofertaSugerida: {
+        tipo: 'PRODUCTO',
+        id: 5,
+        nombre: 'Parrilla Mixta Especial',
+        precio: 58.0,
+        beneficio: 'Corte individual premium de mayor valor en la carta',
+      },
+      accionTomada: "Atención especializada para cliente de alto valor / premium",
+    };
+  }
+
+  // ===================================================================
+  // 3. IDENTIDAD DEL AGENTE / "¿ERES UNA IA / BOT / HUMANO?"
+  // ===================================================================
+  const esPreguntaIdentidad = /eres (una? )?(ia|bot|humano|robot|inteligencia)|qui[eé]n (habla|eres)|con qui[eé]n hablo|c[oó]mo te llamas/i.test(mensajeNorm);
+  if (esPreguntaIdentidad) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! 🤖🥩 Soy el Agente Inteligente oficial de Parrilladas El Establo en Trujillo, conectado en tiempo real a nuestra base de datos SQL Server y cocina a la leña.\nMi trabajo es ayudarte al instante a elegir los mejores cortes según tu gusto, calcular combos y procesar tu pedido sin demoras. ¿Qué corte a la brasa te gustaría disfrutar hoy? 🔥📲`,
+      sugerenciasComerciales: [
+        "Ver carta de cortes a la brasa 🥩",
+        "Ver combos para compartir 👥",
+        "Consultar promociones vigentes 🎉",
+      ],
+      accionTomada: "Explicación transparente de identidad IA del restaurante",
+    };
+  }
+
+  // ===================================================================
+  // 4. PREGUNTAS FUERA DE TEMA (FÚTBOL, POLÍTICA, CULTURA GENERAL, ETC.)
+  // ===================================================================
+  const esFueraDeTema = /real madrid|barcelona|alianza|cristal|f[uú]tbol|partido|champions|messi|ronaldo|presidente|pol[ií]tica|elecciones|congreso|descubri[oó]|capital de|cu[aá]nto es|2\s*\+\s*2|poema|chiste|clima|temperatura|d[oó]lar/i.test(mensajeNorm);
+  if (esFueraDeTema) {
+    return {
+      mensaje: `¡Buena esa, ${nombreCliente}! 😄 Sea en el fútbol, el estudio o el día a día cada quien tiene su favorito, ¡pero el verdadero campeón indiscutible siempre se sirve en nuestra parrilla a la leña! 🔥🥩\nPara que disfrutes como se debe: ¿te preparamos una jugosa *Picaña (S/ 39.00)*, una *Tira de Cerdo (S/ 32.00)* o un *Combo Amigos (S/ 110.00)*? ¡Pagas al toque con Yape! 📲✨`,
+      sugerenciasComerciales: [
+        `¿Sale una Picaña a la Parrilla (S/ 39.00)? 🥩`,
+        `¿Sale un Combo Amigos (S/ 110.00)? 🔥`,
+        `¿Confirmas con Yape al toque? 📲`,
+      ],
+      ofertaSugerida: {
+        tipo: 'PRODUCTO',
+        id: 2,
+        nombre: 'Picaña a la Parrilla 350 g',
+        precio: 39.0,
+      },
+      accionTomada: "Pivote elegante y parrillero ante pregunta fuera de dominio",
+    };
+  }
+
+  // ===================================================================
+  // 5. PREGUNTAS OPERATIVAS (HORARIOS, DIETAS, RESERVAS, BEBIDAS)
+  // ===================================================================
+  if (/horario|a qu[eé] hora (abren|cierran|atienden)|atienden hoy|abierto hoy|hasta qu[eé] hora/i.test(mensajeNorm)) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! ⏰ Atendemos de *Lunes a Domingo de 12:00 m. a 11:00 p.m.* ininterrumpidamente.\n¡Las brasas ya están encendidas y las carnes listas! ¿Te mandamos tu pedido por delivery o pasas a disfrutarlo en nuestro local? 🥩🔥`,
+      sugerenciasComerciales: [
+        "Pedir delivery a domicilio 🛵",
+        "Consultar ubicación del local 📍",
+        "Ver cortes disponibles 🥩",
+      ],
+      accionTomada: "Información veraz de horario comercial",
+    };
+  }
+
+  if (/vegetari|vegan|no como carne|pescado|ceviche|cebiche|mariscos/i.test(mensajeNorm)) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! 🥩 Nuestra pasión y especialidad son 100% las carnes finas a la leña (res, cerdo y chorizos artesanales). Si buscas una alternativa fresca, tenemos nuestra deliciosa *Ensalada César (S/ 18.00)*, papas rústicas doradas y bebidas naturales como Chicha Morada (S/ 12.00) 🥗✨.\n¿Te gustaría probarlas o prefieres ver la carta parrillera? 🔥`,
+      sugerenciasComerciales: [
+        `¿Sale una Ensalada César (S/ 18.00)? 🥗`,
+        `¿Deseas una Chicha Morada de 1L (S/ 12.00)? 🥤`,
+        `Ver carta parrillera completa 🥩`,
+      ],
+      ofertaSugerida: {
+        tipo: 'PRODUCTO',
+        id: 7,
+        nombre: 'Ensalada César',
+        precio: 18.0,
+      },
+      accionTomada: "Aclaración de especialidad gastronómica y opciones complementarias",
+    };
+  }
+
+  if (/reserva|reservar|cumplea[nñ]os|evento|reuni[oó]n|fiesta|grupo grande/i.test(mensajeNorm)) {
+    return {
+      mensaje: `¡Claro que sí, ${nombreCliente}! 🎉 Celebramos cumpleaños y reuniones con la mejor parrilla de Trujillo.\nPodemos prepararte banquetes completos como la *Parrilla Familiar (S/ 149.00)* o *Combo Amigos (S/ 110.00)* con atención preferencial 🥩🥳.\n¿Para cuántas personas sería y para qué fecha lo estás planificando? 📲`,
+      sugerenciasComerciales: [
+        "Cotizar para grupo de 4 a 6 personas 👥",
+        "Cotizar para evento de 10+ personas 🥳",
+        "Consultar disponibilidad de mesas 🍽️",
+      ],
+      accionTomada: "Atención comercial para reservas y eventos grupales",
+    };
+  }
+
+  if (/cerveza|vino|sangr[ií]a|chicha|gaseosa|bebida|trago|licor/i.test(mensajeNorm)) {
+    return {
+      mensaje: `¡Salud, ${nombreCliente}! 🍷 Para acompañar tus carnes al carbón tenemos nuestra refrescante jarra de *Sangría de 1L (S/ 22.00)*, *Chicha Morada de 1L (S/ 12.00)*, cervezas bien frías y gaseosas ❄️🍻.\n¿Te agregamos una jarra a tu pedido? 🥩`,
+      sugerenciasComerciales: [
+        `¿Agregamos Sangría de 1L (S/ 22.00)? 🍷`,
+        `¿Agregamos Chicha Morada de 1L (S/ 12.00)? 🥤`,
+        `¿Confirmas por Yape? 📲`,
+      ],
+      ofertaSugerida: {
+        tipo: 'PRODUCTO',
+        id: 9,
+        nombre: 'Sangría 1L',
+        precio: 22.0,
+      },
+      accionTomada: "Sugerencia de maridaje y bebidas",
+    };
+  }
+
+  // ===================================================================
+  // 6. AGRADECIMIENTOS Y DESPEDIDAS CORTESES
+  // ===================================================================
+  if (/^(gracias|muchas gracias|te agradezco|mil gracias|chau|adi[oó]s|hasta luego|nos vemos|buenas noches|buenos d[ií]as|buenas tardes)/i.test(mensajeNorm.trim())) {
+    return {
+      mensaje: `¡A ti, ${nombreCliente}! 🙌 Siempre un placer atenderte. Cuando el cuerpo te pida una buena carne a la leña en Trujillo, aquí te esperamos con las brasas encendidas. ¡Que tengas un excelente día! 🥩🔥`,
+      sugerenciasComerciales: [
+        "Agradecer al cliente y cerrar ciclo",
+        "Registrar interacción positiva",
+      ],
+      accionTomada: "Despedida y agradecimiento cortés",
+    };
+  }
+
+  // ===================================================================
+  // 7. GIBBERISH / MENSAJES SIN SENTIDO O SOLO SÍMBOLOS
+  // ===================================================================
+  const soloLetras = mensajeNorm.replace(/[^a-záéíóú]/gi, '');
+  const esGibberish = (soloLetras.length >= 4 && !/[aeiouáéíóú]/i.test(soloLetras)) ||
+                      /^([^a-zA-Z0-9]+)$/.test(mensajeNorm.trim()) ||
+                      /(.)\1{4,}/.test(mensajeNorm.trim());
+  if (esGibberish) {
+    return {
+      mensaje: `¡Hola, ${nombreCliente}! 🥩🔥 Parece que tu mensaje llegó con un poquito de humo de la parrilla 😄.\n¿Deseas que te muestre los cortes a la leña, los combos para compartir o nuestras promociones de hoy? ¡Dime qué se te antoja y te atiendo al toque! 📲✨`,
+      sugerenciasComerciales: [
+        "Ver cortes a la brasa 🥩",
+        "Ver combos para compartir 👥",
+        "Consultar promociones 🎉",
+      ],
+      accionTomada: "Manejo amigable de texto no legible / sin sentido",
+    };
+  }
+
   // CASO COMERCIAL 3: RECOMENDACIÓN PARA FAMILIA / GRUPO (ESCENARIO 3)
   if (
     mensajeNorm.includes("familia") &&
@@ -899,21 +1079,30 @@ Genera la respuesta con EXACTAMENTE 2 o 3 líneas cortas, sin viñetas extensas.
     }
   }
 
-  // CASO 4: Objeción de Presupuesto / Poco Dinero ("no tengo plata", "estoy misio", "algo económico")
-  if (
+  // CASO 4: Objeción de Presupuesto / Poco Dinero (Solo si NO pidió algo más caro / premium)
+  const esObjecionPresupuesto = !esInteresPremium && (
     mensajeNorm.includes("no tengo mucha plata") ||
     mensajeNorm.includes("no tengo plata") ||
     mensajeNorm.includes("poco dinero") ||
     mensajeNorm.includes("ajustado") ||
     mensajeNorm.includes("misio") ||
     mensajeNorm.includes("lo mas barato") ||
+    mensajeNorm.includes("lo más barato") ||
     mensajeNorm.includes("mas comodo") ||
+    mensajeNorm.includes("más cómodo") ||
     mensajeNorm.includes("economico") ||
+    mensajeNorm.includes("económico") ||
     mensajeNorm.includes("no me alcanza") ||
-    mensajeNorm.includes("caro") ||
+    mensajeNorm.includes("muy caro") ||
+    mensajeNorm.includes("esta caro") ||
+    mensajeNorm.includes("está caro") ||
+    mensajeNorm.includes("es caro") ||
     mensajeNorm.includes("precio alto") ||
-    mensajeNorm.includes("rebaja")
-  ) {
+    mensajeNorm.includes("rebaja") ||
+    mensajeNorm.includes("descuentito")
+  );
+
+  if (esObjecionPresupuesto) {
     const comboEco = recomendaciones?.topCombos.find((c: any) => c.precio <= 39) || { combo: "Combo Estudiante", precio: 39 };
 
     return {
