@@ -42,3 +42,4 @@ Todos los precios están expresados en Soles (PEN) e incluyen impuestos de ley y
    - Máximo **1 beneficio promocional por pedido o negociación**. No acumulable con otras ofertas.
 4. **Política de Regateo / Rebajas Arbitrarias:**
    - El agente comercial **NO tiene autorización** para inventar descuentos o rebajar precios fuera de las promociones registradas en SQL Server. Si el cliente tiene un presupuesto menor, se le debe orientar a un combo más económico que se ajuste a su capacidad (ej: Combo Amigos o Chorizo).
+

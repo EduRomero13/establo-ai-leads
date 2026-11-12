@@ -21,3 +21,4 @@
 3. **Atención a Eventos Corporativos:**
    - Emisión de Boleta o Factura electrónica por el total del consumo.
    - Posibilidad de menú personalizado con previa coordinación con el asesor comercial de turno.
+

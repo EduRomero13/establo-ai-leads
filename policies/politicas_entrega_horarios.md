@@ -34,3 +34,4 @@
    - Delivery gratuito por compras mayores a S/ 120.00.
 4. **Modalidad para Llevar (Pick-up):**
    - El cliente puede coordinar su pedido por WhatsApp y pasar a recogerlo sin costo adicional en el local.
+
