@@ -20,7 +20,8 @@ const token = envVars.WHATSAPP_ACCESS_TOKEN;
 const phoneId = envVars.WHATSAPP_PHONE_NUMBER_ID || '1469947252866426';
 const version = envVars.WHATSAPP_API_VERSION || 'v21.0';
 
-const imagePath = path.resolve(process.cwd(), 'public', 'brand', 'el_establo_avatar_v1.jpg');
+const targetImage = process.argv[2] || 'el_establo_avatar_v3.jpg';
+const imagePath = path.resolve(process.cwd(), 'public', 'brand', targetImage);
 
 async function uploadAvatar() {
   console.log('=== SUBIENDO FOTO DE PERFIL A META WHATSAPP CLOUD API ===\n');
