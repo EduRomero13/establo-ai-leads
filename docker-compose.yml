@@ -29,6 +29,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
       WHAPI_TOKEN: ${WHAPI_TOKEN:?Define WHAPI_TOKEN}
       WHAPI_API_URL: https://gate.whapi.cloud
+      WHAPI_WEBHOOK_SECRET: ${WHAPI_WEBHOOK_SECRET:-}
       NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
       TZ: America/Lima
     depends_on:

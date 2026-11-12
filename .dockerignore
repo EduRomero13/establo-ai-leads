@@ -3,7 +3,9 @@ node_modules
 .git
 .github
 *.log
-.env*.local
+.env
+.env.*
+!.env.example
 README.md
 docs
 policies
