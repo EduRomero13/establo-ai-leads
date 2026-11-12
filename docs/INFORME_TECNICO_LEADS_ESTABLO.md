@@ -86,21 +86,26 @@ flowchart TD
 
 ## 3. EXPLICACIÓN DETALLADA DE CADA SECCIÓN Y MÓDULO DEL SISTEMA
 
-A continuación se desglosa cada pantalla operativa del sistema con su correspondiente captura de pantalla en vivo tomada directamente del servidor en ejecución.
+A continuación se desglosa cada pantalla operativa del sistema con sus correspondientes capturas de pantalla de alta resolución y renderizado completo tomadas directamente del servidor en ejecución.
 
 ---
 
 ### SECCIÓN 1: PANEL DE CONTROL Y DASHBOARD ESTRATÉGICO (`/`)
 
-El Dashboard central permite a la gerencia de El Establo monitorear el desempeño del embudo en tiempo real mediante indicadores clave de rendimiento (KPIs) calculados desde la base de datos SQL Server:
+El Dashboard central permite a la gerencia de El Establo monitorear el desempeño del embudo en tiempo real mediante tarjetas de KPIs oficiales y gráficos analíticos interactivos basados en Recharts y alimentados por `dbo.vw_kpi_mensual`:
 
-![Dashboard General y KPIs](C:/Users/Usuario/.gemini/antigravity/brain/3af50a75-8319-432b-a436-0a4cbe146408/captura_01_dashboard_kpis.png)
+#### A. Vista Panorámica Completa (KPIs y Gráficos Analíticos)
+![Dashboard Completo con Gráficos](C:/Users/Usuario/.gemini/antigravity/brain/3af50a75-8319-432b-a436-0a4cbe146408/captura_01_dashboard_full.png)
 
-#### Indicadores Clave Desplegados:
-* **TEN (Tasa de Éxito en Negociación):** Mide el porcentaje de negociaciones cerradas con éxito sobre el total de conversaciones iniciadas (promedio meta $\ge 70\%$).
-* **TCP (Tasa de Conversión a Payer):** Porcentaje de leads captados que realizaron su primer pago confirmado.
-* **TPN (Tasa de Pérdida en Negociación):** Monitoreo de clientes que desistieron o no respondieron tras 72 horas de seguimiento.
-* **Distribución por Segmentos:** Gráfico interactivo que segmenta los prospectos entre *Familias*, *Estudiantes*, *Amigos* y *Corporativo*.
+#### B. Tarjetas Oficiales de Rendimiento (TCP, TEN, TPN)
+![Tarjetas KPIs del Dashboard](C:/Users/Usuario/.gemini/antigravity/brain/3af50a75-8319-432b-a436-0a4cbe146408/captura_01_dashboard_kpis.png)
+
+#### Indicadores y Gráficos Desplegados:
+1. **TCP (Tiempo de Conversión Promedio):** Horas transcurridas desde el primer mensaje hasta la confirmación del pago (Promedio actual: **13.18 h** en noviembre, superando la meta de $\le 48\text{ h}$).
+2. **TEN (Tasa de Éxito en Negociación):** Porcentaje de leads que culminan en comensales pagadores (**69.23%**, 9 payers de 13 ciclos en noviembre; **75.00%** histórico global).
+3. **TPN (Tasa de Pérdida en Negociación):** Negociaciones desistidas o vencidas por inactividad de 72 horas (**7.69%**, muy por debajo del límite de $40\%$).
+4. **Gráfico 1 · Evolución de Ciclos y Conversiones:** Barras comparativas que desglosan mes a mes los Ciclos Lead totales, Payers convertidos y Pérdidas.
+5. **Gráfico 2 · Tendencia TEN vs. TPN:** Líneas de evolución temporal que evidencian el incremento de la efectividad comercial y la reducción de fugas.
 
 ---
 
@@ -287,6 +292,7 @@ Para el despliegue en producción, el proyecto cuenta con empaquetamiento optimi
 
 El proyecto **LEADS-ESTABLO** se encuentra 100% implementado, corregido y operativo:
 1. **Todas las secciones del sistema** cuentan con interfaces modernas, funcionales y conectadas a datos reales de SQL Server V3.
-2. **Los errores observados en las capturas de WhatsApp han sido subsanados y blindados** contra cualquier intento de troleo o preguntas trampa del jurado.
-3. **El ranking de vendedores** premia con medallas a los trabajadores que cierran ventas reales, incentivando la productividad comercial.
-4. **La persistencia en GitHub** está sincronizada en la rama principal `main` con historial limpio de commits.
+2. **El Dashboard central incluye sus dos gráficos analíticos oficiales** (*Evolución de Ciclos y Conversiones* y *Tendencia TEN vs. TPN*) renderizados y explicados.
+3. **Los errores observados en las capturas de WhatsApp han sido subsanados y blindados** contra cualquier intento de troleo o preguntas trampa del jurado.
+4. **El ranking de vendedores** premia con medallas a los trabajadores que cierran ventas reales, incentivando la productividad comercial.
+5. **La persistencia en GitHub** está sincronizada en la rama principal `main` con historial limpio de commits.
