@@ -9,7 +9,10 @@ import {
   toolConsultarProductos,
   toolConsultarCombos,
 } from "@/lib/ai-agent";
-import { mapearTipoMensaje, enviarMensajeWhatsAppOficial } from "@/lib/whatsapp-service";
+import {
+  mapearTipoMensaje,
+  enviarMensajeWhatsApp,
+} from "@/lib/whatsapp-service";
 
 // Listar sesiones de WhatsApp con su respectiva negociación y persona
 export async function GET(request: Request) {
@@ -72,7 +75,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, sesiones });
   } catch (error: any) {
     console.error("[API Chat GET Error]:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 },
+    );
   }
 }
 
@@ -98,50 +104,87 @@ export async function POST(request: Request) {
     // -----------------------------------------------------------------------
     if (action === "copiloto_assist") {
       if (!id_negociacion) {
-        return NextResponse.json({ success: false, error: "id_negociacion requerido" }, { status: 400 });
+        return NextResponse.json(
+          { success: false, error: "id_negociacion requerido" },
+          { status: 400 },
+        );
       }
 
       // Obtener últimos mensajes de la sesión
       let ultimosMsg: any[] = [];
       if (id_sesion) {
-        ultimosMsg = await executeQuery<any>(`
+        ultimosMsg = await executeQuery<any>(
+          `
           SELECT TOP 8 direccion, contenido FROM dbo.mensaje_whatsapp
           WHERE id_sesion = @idSesion ORDER BY fecha_mensaje DESC;
-        `, { idSesion: { type: sql.BigInt, value: id_sesion } });
+        `,
+          { idSesion: { type: sql.BigInt, value: id_sesion } },
+        );
       }
 
       const historialFormateado = ultimosMsg.reverse().map((m: any) => ({
-        remitente: m.direccion === "ENTRANTE" ? "lead" as const : "agente" as const,
+        remitente:
+          m.direccion === "ENTRANTE" ? ("lead" as const) : ("agente" as const),
         texto: m.contenido,
       }));
 
-      const ultimoTexto = historialFormateado.length > 0
-        ? historialFormateado[historialFormateado.length - 1].texto
-        : "Hola, ¿qué opciones me recomiendas?";
+      const ultimoTexto =
+        historialFormateado.length > 0
+          ? historialFormateado[historialFormateado.length - 1].texto
+          : "Hola, ¿qué opciones me recomiendas?";
 
       // Consultar IA con Gemini y reglas de negocio
-      const respuestaAgente = await procesarMensajeLead(id_negociacion, ultimoTexto, historialFormateado);
+      const respuestaAgente = await procesarMensajeLead(
+        id_negociacion,
+        ultimoTexto,
+        historialFormateado,
+      );
 
       // Evaluar telemetría de razonamiento
       const txt = ultimoTexto.toLowerCase();
       let intencionDetectada = "CONSULTA_GENERAL";
       let objecionDetectada = null;
-      let tecnicaSuperacion = "Escucha activa y personalización por preferencias";
+      let tecnicaSuperacion =
+        "Escucha activa y personalización por preferencias";
 
-      if (txt.includes("caro") || txt.includes("presupuesto") || txt.includes("a cuanto sale") || txt.includes("precio")) {
+      if (
+        txt.includes("caro") ||
+        txt.includes("presupuesto") ||
+        txt.includes("a cuanto sale") ||
+        txt.includes("precio")
+      ) {
         intencionDetectada = "CONSULTA_PRECIO_PRESUPUESTO";
-        objecionDetectada = txt.includes("caro") ? "PRECIO_ALTO" : "VALIDACION_PRECIO";
-        tecnicaSuperacion = "Desglose de abundancia, costo por persona y alternativas en combos";
-      } else if (txt.includes("amigos") || txt.includes("familia") || txt.includes("grupo") || txt.includes("personas")) {
+        objecionDetectada = txt.includes("caro")
+          ? "PRECIO_ALTO"
+          : "VALIDACION_PRECIO";
+        tecnicaSuperacion =
+          "Desglose de abundancia, costo por persona y alternativas en combos";
+      } else if (
+        txt.includes("amigos") ||
+        txt.includes("familia") ||
+        txt.includes("grupo") ||
+        txt.includes("personas")
+      ) {
         intencionDetectada = "RECOMENDACION_GRUPO";
-        tecnicaSuperacion = "Enfoque en rendición, cortes para compartir y guarniciones abundantes";
-      } else if (txt.includes("promo") || txt.includes("descuento") || txt.includes("oferta")) {
+        tecnicaSuperacion =
+          "Enfoque en rendición, cortes para compartir y guarniciones abundantes";
+      } else if (
+        txt.includes("promo") ||
+        txt.includes("descuento") ||
+        txt.includes("oferta")
+      ) {
         intencionDetectada = "CONSULTA_PROMOCIONES";
-        tecnicaSuperacion = "Transparencia en condiciones y entrega de valor inmediato";
-      } else if (txt.includes("delivery") || txt.includes("tiempo") || txt.includes("demora")) {
+        tecnicaSuperacion =
+          "Transparencia en condiciones y entrega de valor inmediato";
+      } else if (
+        txt.includes("delivery") ||
+        txt.includes("tiempo") ||
+        txt.includes("demora")
+      ) {
         intencionDetectada = "CONSULTA_LOGISTICA";
         objecionDetectada = "TIEMPO_ENTREGA";
-        tecnicaSuperacion = "Garantía de salida a la brasa caliente y empaque térmico seguro";
+        tecnicaSuperacion =
+          "Garantía de salida a la brasa caliente y empaque térmico seguro";
       }
 
       return NextResponse.json({
@@ -151,7 +194,8 @@ export async function POST(request: Request) {
           intencionDetectada,
           objecionDetectada,
           tecnicaSuperacion,
-          estrategiaComercial: "Venta Consultiva Transparente basada en Preferencias SQL V3",
+          estrategiaComercial:
+            "Venta Consultiva Transparente basada en Preferencias SQL V3",
           ofertaSugerida: respuestaAgente.ofertaSugerida,
           sugerenciasComerciales: respuestaAgente.sugerenciasComerciales || [],
         },
@@ -163,7 +207,10 @@ export async function POST(request: Request) {
     // -----------------------------------------------------------------------
     if (action === "confirmar_conversion") {
       if (!id_negociacion) {
-        return NextResponse.json({ success: false, error: "id_negociacion requerido" }, { status: 400 });
+        return NextResponse.json(
+          { success: false, error: "id_negociacion requerido" },
+          { status: 400 },
+        );
       }
 
       // Obtener negociación y persona
@@ -173,11 +220,14 @@ export async function POST(request: Request) {
          JOIN dbo.persona p ON p.id_persona = n.id_persona
          LEFT JOIN dbo.sesion_whatsapp s ON s.id_sesion = n.id_sesion_whatsapp
          WHERE n.id_negociacion = @idNeg`,
-        { idNeg: { type: sql.BigInt, value: id_negociacion } }
+        { idNeg: { type: sql.BigInt, value: id_negociacion } },
       );
 
       if (negData.length === 0) {
-        return NextResponse.json({ success: false, error: "Negociación no encontrada" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, error: "Negociación no encontrada" },
+          { status: 404 },
+        );
       }
 
       const neg = negData[0];
@@ -185,48 +235,63 @@ export async function POST(request: Request) {
 
       // 1. Si no tiene pedido vinculado, crear uno en estado CONFIRMADO
       if (!idPedido) {
-        const resPed = await executeQuery<{ id_pedido: number }>(`
+        const resPed = await executeQuery<{ id_pedido: number }>(
+          `
           INSERT INTO dbo.pedido (id_persona, id_negociacion, tipo, fecha_registro, estado, subtotal, descuento, total)
           VALUES (@idPersona, @idNeg, 'WHATSAPP', SYSUTCDATETIME(), 'CONFIRMADO', @monto, 0, @monto);
           SELECT SCOPE_IDENTITY() AS id_pedido;
-        `, {
-          idPersona: { type: sql.BigInt, value: neg.id_persona },
-          idNeg: { type: sql.BigInt, value: id_negociacion },
-          monto: { type: sql.Decimal(10, 2), value: monto },
-        });
+        `,
+          {
+            idPersona: { type: sql.BigInt, value: neg.id_persona },
+            idNeg: { type: sql.BigInt, value: id_negociacion },
+            monto: { type: sql.Decimal(10, 2), value: monto },
+          },
+        );
         idPedido = resPed[0].id_pedido;
 
         await executeQuery(
           `UPDATE dbo.negociacion SET id_pedido = @idPed WHERE id_negociacion = @idNeg;`,
-          { idPed: { type: sql.BigInt, value: idPedido }, idNeg: { type: sql.BigInt, value: id_negociacion } }
+          {
+            idPed: { type: sql.BigInt, value: idPedido },
+            idNeg: { type: sql.BigInt, value: id_negociacion },
+          },
         );
       }
 
       // 2. Registrar el pago en dbo.pago
-      const resPago = await executeQuery<{ id_pago: number }>(`
+      const resPago = await executeQuery<{ id_pago: number }>(
+        `
         INSERT INTO dbo.pago (id_pedido, id_medio_pago, monto, moneda, fecha_pago, estado, referencia)
         VALUES (@idPedido, 1, @monto, 'PEN', SYSUTCDATETIME(), 'CONFIRMADO', @ref);
         SELECT SCOPE_IDENTITY() AS id_pago;
-      `, {
-        idPedido: { type: sql.BigInt, value: idPedido },
-        monto: { type: sql.Decimal(10, 2), value: monto },
-        ref: { type: sql.VarChar(100), value: `PAGO_YAPE_${Date.now()}` },
-      });
+      `,
+        {
+          idPedido: { type: sql.BigInt, value: idPedido },
+          monto: { type: sql.Decimal(10, 2), value: monto },
+          ref: { type: sql.VarChar(100), value: `PAGO_YAPE_${Date.now()}` },
+        },
+      );
 
       // 3. Actualizar la negociación a CONVERTIDA con fecha_primer_pago
-      await executeQuery(`
+      await executeQuery(
+        `
         UPDATE dbo.negociacion 
         SET estado = 'CONVERTIDA', 
             fecha_primer_pago = COALESCE(fecha_primer_pago, SYSUTCDATETIME())
         WHERE id_negociacion = @idNeg;
-      `, { idNeg: { type: sql.BigInt, value: id_negociacion } });
+      `,
+        { idNeg: { type: sql.BigInt, value: id_negociacion } },
+      );
 
       // 4. Actualizar fase_actual del cliente a PAYER (Regla comercial 5)
-      await executeQuery(`
+      await executeQuery(
+        `
         UPDATE dbo.persona 
         SET fase_actual = 'PAYER' 
         WHERE id_persona = @idPersona;
-      `, { idPersona: { type: sql.BigInt, value: neg.id_persona } });
+      `,
+        { idPersona: { type: sql.BigInt, value: neg.id_persona } },
+      );
 
       // 5. Registrar acción del agente
       await toolRegistrarAccionAgente({
@@ -243,20 +308,26 @@ export async function POST(request: Request) {
 
 Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro equipo en Trujillo ya tiene la orden lista para servirte calientito. ¡Muchas gracias por tu compra en Parrilladas El Establo! 🥩✨`;
 
-        const envio = await enviarMensajeWhatsAppOficial({
+        const envio = await enviarMensajeWhatsApp({
           telefonoDestino: neg.telefono_cliente,
           texto: textoConfirmacion,
         });
 
         if (envio.success && neg.id_sesion_whatsapp) {
-          await executeQuery(`
+          await executeQuery(
+            `
             INSERT INTO dbo.mensaje_whatsapp (id_sesion, wamid, direccion, tipo, contenido, fecha_mensaje, estado_entrega)
             VALUES (@idSesion, @wamid, 'SALIENTE', 'TEXTO', @contenido, SYSUTCDATETIME(), 'ENVIADO');
-          `, {
-            idSesion: { type: sql.BigInt, value: neg.id_sesion_whatsapp },
-            wamid: { type: sql.VarChar(200), value: envio.wamid || null },
-            contenido: { type: sql.NVarChar(sql.MAX), value: textoConfirmacion },
-          });
+          `,
+            {
+              idSesion: { type: sql.BigInt, value: neg.id_sesion_whatsapp },
+              wamid: { type: sql.VarChar(200), value: envio.wamid || null },
+              contenido: {
+                type: sql.NVarChar(sql.MAX),
+                value: textoConfirmacion,
+              },
+            },
+          );
         }
       }
 
@@ -272,7 +343,10 @@ Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro eq
     // ACCIÓN: ENVIAR MENSAJE REGULAR (DEL LEAD O DEL AGENTE)
     // -----------------------------------------------------------------------
     if (!id_sesion || !contenido) {
-      return NextResponse.json({ success: false, error: "Datos incompletos (id_sesion, contenido)" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Datos incompletos (id_sesion, contenido)" },
+        { status: 400 },
+      );
     }
 
     let wamid = `SIM_WAMID_${Date.now()}`;
@@ -282,11 +356,11 @@ Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro eq
     if (direccion === "SALIENTE" && enviarWhatsAppReal) {
       const sesData = await executeQuery<{ telefono_cliente: string }>(
         `SELECT telefono_cliente FROM dbo.sesion_whatsapp WHERE id_sesion = @idSesion`,
-        { idSesion: { type: sql.BigInt, value: id_sesion } }
+        { idSesion: { type: sql.BigInt, value: id_sesion } },
       );
 
       if (sesData.length > 0 && sesData[0].telefono_cliente) {
-        const envio = await enviarMensajeWhatsAppOficial({
+        const envio = await enviarMensajeWhatsApp({
           telefonoDestino: sesData[0].telefono_cliente,
           texto: contenido,
         });
@@ -315,40 +389,51 @@ Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro eq
     });
 
     // Actualizar fecha_ultimo_mensaje en sesion_whatsapp
-    await executeQuery(`
+    await executeQuery(
+      `
       UPDATE dbo.sesion_whatsapp 
       SET fecha_ultimo_mensaje = SYSUTCDATETIME() 
       WHERE id_sesion = @idSesion;
-    `, {
-      idSesion: { type: sql.BigInt, value: id_sesion },
-    });
+    `,
+      {
+        idSesion: { type: sql.BigInt, value: id_sesion },
+      },
+    );
 
     let respuestaAgente: any = null;
 
     // 2. Si el mensaje es ENTRANTE (del Lead) y autoResponder es true, procesamos con el Agente IA
     if (direccion === "ENTRANTE" && autoResponder && id_negociacion) {
-      const ultimosMsg = await executeQuery<any>(`
+      const ultimosMsg = await executeQuery<any>(
+        `
         SELECT TOP 6 direccion, contenido FROM dbo.mensaje_whatsapp
         WHERE id_sesion = @idSesion ORDER BY fecha_mensaje DESC;
-      `, { idSesion: { type: sql.BigInt, value: id_sesion } });
+      `,
+        { idSesion: { type: sql.BigInt, value: id_sesion } },
+      );
 
       const historialFormateado = ultimosMsg.reverse().map((m: any) => ({
-        remitente: m.direccion === "ENTRANTE" ? "lead" as const : "agente" as const,
+        remitente:
+          m.direccion === "ENTRANTE" ? ("lead" as const) : ("agente" as const),
         texto: m.contenido,
       }));
 
       // Procesar con el Agente Inteligente
-      respuestaAgente = await procesarMensajeLead(id_negociacion, contenido, historialFormateado);
+      respuestaAgente = await procesarMensajeLead(
+        id_negociacion,
+        contenido,
+        historialFormateado,
+      );
 
       // Si tenemos teléfono y se solicita WhatsApp Real, enviar la respuesta del Agente a WhatsApp
       let wamidResp = `AGENTE_WAMID_${Date.now()}`;
       if (enviarWhatsAppReal) {
         const sesData = await executeQuery<{ telefono_cliente: string }>(
           `SELECT telefono_cliente FROM dbo.sesion_whatsapp WHERE id_sesion = @idSesion`,
-          { idSesion: { type: sql.BigInt, value: id_sesion } }
+          { idSesion: { type: sql.BigInt, value: id_sesion } },
         );
         if (sesData.length > 0 && sesData[0].telefono_cliente) {
-          const envio = await enviarMensajeWhatsAppOficial({
+          const envio = await enviarMensajeWhatsApp({
             telefonoDestino: sesData[0].telefono_cliente,
             texto: respuestaAgente.mensaje,
           });
@@ -359,15 +444,21 @@ Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro eq
       }
 
       // Guardar la respuesta del Agente en la base de datos
-      await executeQuery(`
+      await executeQuery(
+        `
         INSERT INTO dbo.mensaje_whatsapp (id_sesion, wamid, direccion, tipo, contenido, fecha_mensaje, estado_entrega)
         VALUES (@idSesion, @wamid, 'SALIENTE', @tipo, @contenido, SYSUTCDATETIME(), 'ENVIADO');
-      `, {
-        idSesion: { type: sql.BigInt, value: id_sesion },
-        wamid: { type: sql.VarChar(200), value: wamidResp },
-        tipo: { type: sql.VarChar(20), value: mapearTipoMensaje('TEXTO') },
-        contenido: { type: sql.NVarChar(sql.MAX), value: respuestaAgente.mensaje },
-      });
+      `,
+        {
+          idSesion: { type: sql.BigInt, value: id_sesion },
+          wamid: { type: sql.VarChar(200), value: wamidResp },
+          tipo: { type: sql.VarChar(20), value: mapearTipoMensaje("TEXTO") },
+          contenido: {
+            type: sql.NVarChar(sql.MAX),
+            value: respuestaAgente.mensaje,
+          },
+        },
+      );
 
       // Si el agente recomendó una oferta y se desea registrar como propuesta
       if (respuestaAgente.ofertaSugerida) {
@@ -376,7 +467,7 @@ Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro eq
           id_producto: off.tipo === "PRODUCTO" ? off.id : undefined,
           id_combo: off.tipo === "COMBO" ? off.id : undefined,
           id_promocion: off.tipo === "PROMOCION" ? off.id : undefined,
-          respuesta: 'SIN_RESPUESTA',
+          respuesta: "SIN_RESPUESTA",
           detalle: `Sugerido por Agente Establo IA: ${off.nombre}`,
         });
       }
@@ -389,6 +480,9 @@ Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro eq
     });
   } catch (error: any) {
     console.error("[API Chat POST Error]:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 },
+    );
   }
 }

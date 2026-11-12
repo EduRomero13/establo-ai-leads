@@ -14,10 +14,12 @@ async function testAgentSuite() {
     "buenas noches gracias por la atencion",
   ];
 
-  console.log("=== EVALUACIÓN DE ROBUSTEZ DEL AGENTE COMERCIAL (ID_NEGOCIACION = 20) ===\n");
+  console.log(
+    "=== EVALUACIÓN DE ROBUSTEZ DEL AGENTE COMERCIAL (ID_NEGOCIACION = 20) ===\n",
+  );
 
   for (const p of preguntas) {
-    const res = await fetch("http://localhost:3001/api/chat", {
+    const res = await fetch("http://localhost:3000/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -32,4 +34,3 @@ async function testAgentSuite() {
   }
 }
 testAgentSuite();
-
