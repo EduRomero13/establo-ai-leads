@@ -3,7 +3,7 @@ import {
   validarFirmaMeta,
   registrarEventoIntegracion,
   marcarEventoProcesado,
-  procesarMensajeEntranteMeta,
+  procesarMensajeEntrante,
   actualizarEstadoMensajeMeta,
   mapearTipoMensaje,
   MetaWebhookPayload,
@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get("hub.verify_token");
     const challenge = searchParams.get("hub.challenge");
 
-    const expectedToken = process.env.WHATSAPP_VERIFY_TOKEN || "establo_ai_webhook_secret_2026";
+    const expectedToken =
+      process.env.WHATSAPP_VERIFY_TOKEN || "establo_ai_webhook_secret_2026";
 
     if (mode === "subscribe" && token === expectedToken) {
       console.log("[Webhook WhatsApp] Verificación oficial de Meta exitosa");
@@ -30,11 +31,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.warn("[Webhook WhatsApp] Intento de verificación fallido o token inválido");
-    return NextResponse.json({ error: "Token de verificación incorrecto" }, { status: 403 });
+    console.warn(
+      "[Webhook WhatsApp] Intento de verificación fallido o token inválido",
+    );
+    return NextResponse.json(
+      { error: "Token de verificación incorrecto" },
+      { status: 403 },
+    );
   } catch (error: any) {
     console.error("[Webhook WhatsApp GET Error]:", error);
-    return NextResponse.json({ error: "Error en verificación de webhook" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error en verificación de webhook" },
+      { status: 500 },
+    );
   }
 }
 
@@ -79,11 +88,12 @@ export async function POST(request: NextRequest) {
           if (val.statuses && Array.isArray(val.statuses)) {
             for (const status of val.statuses) {
               const eventId = `status_${status.id}_${status.status}_${status.timestamp}`;
-              const { esDuplicado, idEvento } = await registrarEventoIntegracion(
-                "WHATSAPP_CLOUD",
-                eventId,
-                `STATUS_${status.status.toUpperCase()}`
-              );
+              const { esDuplicado, idEvento } =
+                await registrarEventoIntegracion(
+                  "WHATSAPP_CLOUD",
+                  eventId,
+                  `STATUS_${status.status.toUpperCase()}`,
+                );
 
               if (!esDuplicado) {
                 await actualizarEstadoMensajeMeta({
@@ -99,18 +109,22 @@ export async function POST(request: NextRequest) {
 
           // B.2 Procesar Mensajes Entrantes de Clientes
           if (val.messages && Array.isArray(val.messages)) {
-            const contactName = val.contacts?.[0]?.profile?.name || "Cliente WhatsApp";
+            const contactName =
+              val.contacts?.[0]?.profile?.name || "Cliente WhatsApp";
 
             for (const msg of val.messages) {
               const eventId = `msg_${msg.id}`;
-              const { esDuplicado, idEvento } = await registrarEventoIntegracion(
-                "WHATSAPP",
-                eventId,
-                "MENSAJE_ENTRANTE"
-              );
+              const { esDuplicado, idEvento } =
+                await registrarEventoIntegracion(
+                  "WHATSAPP",
+                  eventId,
+                  "MENSAJE_ENTRANTE",
+                );
 
               if (esDuplicado) {
-                console.log(`[Webhook WhatsApp] Mensaje duplicado omitido: ${msg.id}`);
+                console.log(
+                  `[Webhook WhatsApp] Mensaje duplicado omitido: ${msg.id}`,
+                );
                 continue;
               }
 
@@ -137,7 +151,8 @@ export async function POST(request: NextRequest) {
 
               // Procesar mensaje y generar respuesta con IA de forma asíncrona
               // No bloqueamos la respuesta rápida 200 a Meta
-              procesarMensajeEntranteMeta({
+              procesarMensajeEntrante({
+                proveedor: "WHATSAPP_CLOUD",
                 wamid: msg.id,
                 remitenteRaw: msg.from,
                 nombreContacto: contactName,
@@ -148,7 +163,7 @@ export async function POST(request: NextRequest) {
                 .then(() => {
                   if (idEvento) marcarEventoProcesado(idEvento);
                 })
-                .catch((err) => {
+                .catch((err: any) => {
                   console.error("[Error Procesando Evento Webhook]:", err);
                   if (idEvento) marcarEventoProcesado(idEvento, err.message);
                 });
@@ -159,7 +174,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Responder inmediatamente 200 OK a Meta
-    return NextResponse.json({ status: "success", received: true }, { status: 200 });
+    return NextResponse.json(
+      { status: "success", received: true },
+      { status: 200 },
+    );
   } catch (error: any) {
     console.error("[Webhook WhatsApp POST Error]:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

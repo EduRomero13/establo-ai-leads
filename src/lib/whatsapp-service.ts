@@ -183,25 +183,82 @@ export async function marcarEventoProcesado(idEvento: number, error?: string) {
 }
 
 // =========================================================================
-// 4. ENVÍO OFICIAL DE MENSAJES VÍA GRAPH API DE META
+// 4. ENVÍO OFICIAL DE MENSAJES VÍA GRAPH API DE META O WHAPI.CLOUD
 // =========================================================================
 
-export async function enviarMensajeWhatsAppOficial(params: {
+export async function enviarMensajeWhatsApp(params: {
   telefonoDestino: string; // ej "51948834920"
   texto: string;
 }): Promise<{ success: boolean; wamid?: string; error?: string }> {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
-  const version = process.env.WHATSAPP_API_VERSION?.trim() || "v21.0";
-  const isDemo = process.env.WHATSAPP_DEMO_MODE === "true" || !token || token.trim() === "";
-
-  if (isDemo) {
+  // 1. Determinar proveedor
+  const whapiToken = process.env.WHAPI_TOKEN?.trim();
+  const metaToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+  
+  // Priorizar Whapi si está configurado, según solicitud del usuario
+  if (whapiToken && whapiToken !== "") {
+    return enviarMensajeWhapi(params);
+  } else if (metaToken && metaToken !== "") {
+    return enviarMensajeWhatsAppOficial(params);
+  } else {
+    // Modo Demo
     console.log(`[WhatsApp DEMO OUT] Para: ${params.telefonoDestino} | Mensaje: ${params.texto}`);
     return {
       success: true,
       wamid: `wamid.DEMO_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     };
   }
+}
+
+async function enviarMensajeWhapi(params: {
+  telefonoDestino: string;
+  texto: string;
+}): Promise<{ success: boolean; wamid?: string; error?: string }> {
+  try {
+    const token = process.env.WHAPI_TOKEN;
+    const apiUrl = process.env.WHAPI_API_URL || "https://gate.whapi.cloud";
+    
+    // Whapi usa el número con código de país sin el "+" usualmente, o con él. 
+    // Aseguramos formato internacional
+    const telDigits = params.telefonoDestino.replace(/\D/g, "");
+    const to = telDigits.startsWith("51") ? telDigits : `51${telDigits}`;
+
+    const url = `${apiUrl}/messages/text`;
+    const payload = {
+      typing_time: 0,
+      to: `${to}@s.whatsapp.net`,
+      body: params.texto
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      console.error("[Whapi Error]:", data);
+      return { success: false, error: data?.error?.message || "Error al enviar mensaje vía Whapi" };
+    }
+
+    const wamid = data?.message?.id;
+    return { success: true, wamid };
+  } catch (err: any) {
+    console.error("[Whapi Send Exception]:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function enviarMensajeWhatsAppOficial(params: {
+  telefonoDestino: string;
+  texto: string;
+}): Promise<{ success: boolean; wamid?: string; error?: string }> {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const version = process.env.WHATSAPP_API_VERSION?.trim() || "v21.0";
 
   try {
     const telDigits = params.telefonoDestino.replace(/\D/g, "");
@@ -243,7 +300,8 @@ export async function enviarMensajeWhatsAppOficial(params: {
 // 5. RECEPCIÓN Y ASIGNACIÓN DEL CLIENTE / NEGOCIACIÓN / SESIÓN
 // =========================================================================
 
-export async function procesarMensajeEntranteMeta(params: {
+export async function procesarMensajeEntrante(params: {
+  proveedor: "WHATSAPP_CLOUD" | "WHAPI";
   wamid: string;
   remitenteRaw: string;
   nombreContacto?: string;
@@ -295,12 +353,13 @@ export async function procesarMensajeEntranteMeta(params: {
     // Crear nueva sesión vinculando a persona si existe
     const insertSesion = `
       INSERT INTO dbo.sesion_whatsapp (id_persona, telefono_cliente, fecha_inicio, fecha_ultimo_mensaje, estado, origen)
-      VALUES (@idPersona, @tel, SYSUTCDATETIME(), SYSUTCDATETIME(), 'ABIERTA', 'WHATSAPP_CLOUD_API');
+      VALUES (@idPersona, @tel, SYSUTCDATETIME(), SYSUTCDATETIME(), 'ABIERTA', @origen);
       SELECT SCOPE_IDENTITY() AS id_sesion;
     `;
     const resSes = await executeQuery<{ id_sesion: number }>(insertSesion, {
       idPersona: { type: sql.BigInt, value: persona?.id_persona || null },
       tel: { type: sql.VarChar(20), value: params.remitenteRaw },
+      origen: { type: sql.VarChar(50), value: params.proveedor },
     });
     idSesion = resSes[0].id_sesion;
   }
@@ -319,8 +378,6 @@ export async function procesarMensajeEntranteMeta(params: {
     contenido: { type: sql.NVarChar(sql.MAX), value: params.contenido },
     opcion: { type: sql.VarChar(50), value: params.opcionSeleccionada || null },
   });
-
-  const idMensajeEntrante = resMsg[0].id_mensaje;
 
   // 4. Evaluar Negociación LEAD
   let idNegociacion: number | null = null;
@@ -358,7 +415,7 @@ Para darte promociones exclusivas y asesorarte a tu gusto, regístrate en segund
 
 ¡Apenas lo envíes, nuestro asesor te atenderá con los mejores cortes a la leña! 🤤🚀`;
 
-    const envio = await enviarMensajeWhatsAppOficial({
+    const envio = await enviarMensajeWhatsApp({
       telefonoDestino: params.remitenteRaw,
       texto: textoNoLead,
     });
@@ -385,7 +442,7 @@ Para darte promociones exclusivas y asesorarte a tu gusto, regístrate en segund
     ]);
 
     // Enviar respuesta por WhatsApp
-    const envio = await enviarMensajeWhatsAppOficial({
+    const envio = await enviarMensajeWhatsApp({
       telefonoDestino: params.remitenteRaw,
       texto: respuestaAgente.mensaje,
     });
@@ -405,8 +462,8 @@ Para darte promociones exclusivas y asesorarte a tu gusto, regístrate en segund
       await toolRegistrarAccionAgente({
         id_negociacion: idNegociacion,
         id_sesion_whatsapp: idSesion,
-        accion: 'RESPONDER_WHATSAPP_CLOUD_API',
-        detalle: `Mensaje enviado a ${persona.nombres} vía Meta API`,
+        accion: 'RESPONDER_WHATSAPP',
+        detalle: `Mensaje enviado a ${persona.nombres} vía ${params.proveedor}`,
         resultado: 'EXITOSO',
       });
     }

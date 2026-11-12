@@ -1,28 +1,44 @@
 services:
-  establo-backend:
+  database:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+      MSSQL_PID: Developer
+    volumes:
+      - mssql-data:/var/opt/mssql
+    networks:
+      - establo-network
+
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: establo-backend-crm
-    restart: always
-    ports:
-      - "3000:3000"
+      args:
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+    restart: unless-stopped
+    expose:
+      - "3000"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DB_SERVER=${DB_SERVER:-host.docker.internal}
-      - DB_PORT=${DB_PORT:-1434}
-      - DB_NAME=${DB_NAME:-buyer}
-      - DB_USER=${DB_USER:-buyer_app}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_ENCRYPT=${DB_ENCRYPT:-false}
-      - DB_TRUST_SERVER_CERTIFICATE=${DB_TRUST_SERVER_CERTIFICATE:-true}
-      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
-      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID:-1469947252866426}
-      - WHATSAPP_BUSINESS_ACCOUNT_ID=${WHATSAPP_BUSINESS_ACCOUNT_ID}
-      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-establo_ai_webhook_secret_2026}
-      - WHATSAPP_API_VERSION=${WHATSAPP_API_VERSION:-v21.0}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      NODE_ENV: production
+      DB_SERVER: database
+      DB_PORT: "1433"
+      DB_NAME: buyer
+      DB_USER: sa
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+      WHAPI_TOKEN: ${WHAPI_TOKEN:?Define WHAPI_TOKEN}
+      WHAPI_API_URL: https://gate.whapi.cloud
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+      TZ: America/Lima
+    depends_on:
+      - database
+    networks:
+      - establo-network
 
+networks:
+  establo-network:
+    driver: bridge
+
+volumes:
+  mssql-data:
