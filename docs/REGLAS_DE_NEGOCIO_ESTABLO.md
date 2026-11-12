@@ -134,3 +134,4 @@ graph TD
 | `scripts/test_robustez_agente.js` | 13 Pruebas de Borde (High-Ticket, FAQ, De-escalación, Anti-troleo) | **13/13 PASS (100%)** |
 
 **Conclusión:** Cada una de las 16 Reglas de Negocio cuenta con implementación verificada en la base de datos SQL Server V3, tipado en TypeScript y manejo seguro en el Agente IA.
+
