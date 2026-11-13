@@ -292,6 +292,30 @@ Criterios:
 
 ---
 
+### 2.5 Convertir tu número en LEAD para probar el Agente IA
+
+El Agente IA **solo responde a números que ya existen en `dbo.persona` y que tienen una
+negociación `ABIERTA`**. Si escribes desde un número no registrado, el bot solo envía el
+enlace de captación (rama "no lead") y **nunca** registra en `dbo.accion_agente`.
+
+Script: `sql/04_SEMILLA_LEAD_PRUEBA.sql` (ya montado en `/sql`). Toma el teléfono de la
+última sesión de WhatsApp y lo convierte en LEAD con negociación `ABIERTA`. Es idempotente.
+
+En el servicio `database`, **en una sola línea**:
+
+```sh
+SQLCMD=$(ls /opt/mssql-tools*/bin/sqlcmd | tail -1); "$SQLCMD" -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -d buyer -i /sql/04_SEMILLA_LEAD_PRUEBA.sql
+```
+
+Debe imprimir el teléfono detectado y crear `persona` + `negociacion ABIERTA`.
+Después, **envía un WhatsApp nuevo**: ahora sí debe responder Hermes y aparecer la fila
+en `dbo.accion_agente` con el detalle `Respuesta generada por Hermes Agent (...)`.
+
+> Si el script dice *"No hay sesiones"*, escribe primero un mensaje al bot (aunque recibas
+> el formulario de captación) y vuelve a ejecutarlo.
+
+---
+
 ## 3. Hermes
 
 Hermes Agent (NousResearch) expone una **API OpenAI-compatible**:
