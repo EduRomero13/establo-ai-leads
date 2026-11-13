@@ -53,14 +53,18 @@ services:
     depends_on:
       database:
         condition: service_healthy
+    # OJO: Traefik NO enruta contenedores "unhealthy" (se queda sin router -> 404).
+    # Usar 127.0.0.1 y NO "localhost": en Alpine "localhost" resuelve a ::1 (IPv6)
+    # y Next.js escucha en 0.0.0.0 (solo IPv4), lo que marcaba el contenedor unhealthy.
+    # Endpoint ligero sin dependencia de la BD para no tumbar el enrutado si la BD falla.
     healthcheck:
       test:
         - CMD-SHELL
-        - wget -qO- http://localhost:3000/api/config >/dev/null 2>&1 || exit 1
+        - wget -qO- http://127.0.0.1:3000/api/webhook/whapi >/dev/null 2>&1 || exit 1
       interval: 30s
       timeout: 5s
       retries: 5
-      start_period: 40s
+      start_period: 30s
     networks: [establo-network, dokploy-network]
 
 networks:

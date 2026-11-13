@@ -142,6 +142,51 @@ node -e 'fetch("https://TU_DOMINIO/api/webhook/whapi").then(async r=>console.log
 
 ---
 
+## 0.2 Síntoma: 404 de Traefik aunque la red y los labels estén bien
+
+Caso real: el contenedor `app` estaba en `dokploy-network`, los labels de Traefik
+estaban correctos y Traefik **sí** alcanzaba la app por la red interna
+(`wget http://<app>:3000/api/webhook/whapi` → `{"status":"ready"}`), pero el dominio
+seguía devolviendo `404 page not found` y el certificado era autofirmado.
+
+**Causa:** el contenedor estaba **`unhealthy`**. Traefik (provider Docker) **ignora los
+contenedores unhealthy**: no crea el router → 404 → Let's Encrypt no puede validar el
+reto HTTP-01 → Traefik sirve su certificado por defecto (autofirmado).
+
+Comprobar el estado de salud y el motivo:
+
+```sh
+docker ps -a --format '{{.Names}}\t{{.Status}}' | grep -i agente
+docker inspect eduardo-agente-yuldzi-app-1 --format '{{json .State.Health}}'
+```
+
+El error típico: el healthcheck usa `http://localhost:3000/...`. En Alpine
+`localhost` resuelve primero a `::1` (IPv6), pero Next.js escucha en `0.0.0.0`
+(**solo IPv4**) → `wget` falla → contenedor unhealthy.
+
+Reproducción (debe dar `exit=1` con `localhost` y `exit=0` con `127.0.0.1`):
+
+```sh
+docker exec eduardo-agente-yuldzi-app-1 sh -c 'wget -qO- http://localhost:3000/api/webhook/whapi >/dev/null 2>&1; echo "localhost=$?"'
+docker exec eduardo-agente-yuldzi-app-1 sh -c 'wget -qO- http://127.0.0.1:3000/api/webhook/whapi >/dev/null 2>&1; echo "127.0.0.1=$?"'
+```
+
+Solución (ya aplicada en `docker-compose.yml`): usar **`127.0.0.1`** y un endpoint
+ligero **sin dependencia de la BD** (si el healthcheck depende de SQL Server, una
+caída de la BD tumbaría el enrutado del webhook):
+
+```yaml
+healthcheck:
+  test:
+    - CMD-SHELL
+    - wget -qO- http://127.0.0.1:3000/api/webhook/whapi >/dev/null 2>&1 || exit 1
+```
+
+Regla de oro: **un healthcheck roto deja la app sin router.** Si un dominio que antes
+funcionaba empieza a dar 404, lo primero es mirar si el contenedor está `unhealthy`.
+
+---
+
 ## 1. Semáforo rápido (nuevo endpoint)
 
 Desde la terminal del servicio `app`:
