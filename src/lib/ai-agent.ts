@@ -370,12 +370,15 @@ Tu objetivo: responder por WhatsApp de forma dinámica, tentadora, cálida y ULT
 1. ULTRA CONCISO: MÁXIMO 2 A 3 LÍNEAS CORTAS. Los clientes en WhatsApp no leen párrafos largos ni testamentos. Sé directo, tentador y rápido.
 2. EMOJIS ESTRATÉGICOS: Usa pocos emojis precisos (🥩, 🔥, 🤤, 📲).
 3. DATOS Y PRECIOS EN NEGRITA: Resalta platos y precios con asteriscos (ej: *Chorizo Parrillero* *S/ 15.00*). NUNCA inventes platos ni precios.
-4. CIERRE RÁPIDO: Termina siempre con una pregunta de cierre corta invitando al pedido por Yape o Plin.
+4. CIERRE SIN BUCLE:
+   - Mientras el cliente aún esté eligiendo o preguntando, termina con una pregunta corta para cerrar el pedido (Yape/Plin/contraentrega o reserva).
+   - Si el cliente YA confirmó su pedido, envió su dirección de entrega o indicó que ya realizó el pago (Yape/Plin/transferencia), NO sigas ofreciendo ni reinicies la venta ni vuelvas a preguntar qué desea pedir. Confirma que su pedido ya entra a preparación a la leña, indícale que llegará en *30 a 45 minutos*, agradece y despídete cordialmente.
 5. TONO PERUANO CÁLIDO: Amable y parrillero, cero texto corporativo aburrido.
 
 Datos del Lead:
 - Nombre: ${nombreCliente}
 - Segmento: ${estadoNeg.segmento || "Clientes"}
+- Estado de negociación: ${estadoNeg.estado}
 - Ciclo: ${estadoNeg.nro_ciclo} (${esRecurrente ? "Cliente habitual" : "Primer contacto"})
 - Favorito declarado: ${recomendaciones?.preferencias?.producto_favorito_declarado || "No registrado"}
 - Más comprado: ${recomendaciones?.preferencias?.nombre_mas_comprado || "Ninguno"}
@@ -385,7 +388,7 @@ Datos del Lead:
 
 Historial reciente del chat:
 ${historialPrevio
-  .slice(-3)
+  .slice(-6)
   .map((h) => `${h.remitente === "lead" ? "Cliente" : "Agente"}: ${h.texto}`)
   .join("\n")}
 `;
@@ -401,7 +404,7 @@ ${historialPrevio
           model: hermesModel,
           messages: [
             { role: "system", content: promptSistema },
-            ...historialPrevio.slice(-3).map((h) => ({
+            ...historialPrevio.slice(-6).map((h) => ({
               role: h.remitente === "lead" ? "user" : "assistant",
               content: h.texto,
             })),
@@ -490,6 +493,26 @@ ${historialPrevio
         "Ofrecer cambio de producto o cortesía",
       ],
       accionTomada: "De-escalación cortés y profesional ante queja/provocación",
+    };
+  }
+
+  // ===================================================================
+  // 1B. CONFIRMACIÓN FINAL DE PEDIDO / PAGO REALIZADO / DIRECCIÓN
+  // Evita que el agente entre en bucle ofreciendo de nuevo tras confirmar.
+  // ===================================================================
+  const esConfirmacionFinalOPago =
+    /ya\s*(yape[eé]?|pline[eé]?|pagu[eé]|transfer[ií]|envi[eé]\s*(el\s*)?(yape|plin|pago|comprobante|voucher|captura)|depos[ií]t[eé])|te\s*(yape[eé]|pline[eé]|pagu[eé]|transfer[ií])|env[ií]o\s*(el\s*)?(comprobante|voucher|captura)|mi\s*direcci[oó]n\s*es|env[ií]amelo\s*a|m[aá]ndamelo\s*a|listo,?\s*(confirmo|confirmado|env[ií]alo|m[aá]ndalo|dale)|s[ií],?\s*confirmo\s*(el\s*)?pedido/i.test(
+      mensajeNorm,
+    );
+
+  if (esConfirmacionFinalOPago || estadoNeg.estado === "CONVERTIDA") {
+    return {
+      mensaje: `¡Muchas gracias, ${nombreCliente}! 🙌 Tu pedido ya está confirmado y pasa directo a nuestra parrilla a la leña. Estará llegando en aproximadamente *30 a 45 minutos* 🔥🛵. ¡Buen provecho!`,
+      sugerenciasComerciales: [
+        "Validar pago en caja y confirmar conversión",
+        "Despachar pedido a cocina / delivery",
+      ],
+      accionTomada: "Confirmación final de pedido y cierre sin bucle",
     };
   }
 
