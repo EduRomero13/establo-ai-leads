@@ -325,6 +325,7 @@ export interface AgenteRespuesta {
   };
   accionTomada?: string;
   requiereIntervencionHumana?: boolean;
+  motor?: "HERMES" | "HEURISTICO";
 }
 
 export async function procesarMensajeLead(
@@ -351,12 +352,15 @@ export async function procesarMensajeLead(
   // -------------------------------------------------------------------
   // INTEGRACIÓN CON AGENTE HERMES (IA EXTERNA)
   // -------------------------------------------------------------------
-  const hermesUrl = process.env.HERMES_API_URL;
-  const hermesKey = process.env.HERMES_API_KEY;
+  const hermesUrl = process.env.HERMES_API_URL?.trim();
+  const hermesKey = process.env.HERMES_API_KEY?.trim();
+  const hermesModel = process.env.HERMES_MODEL?.trim() || "hermes-agent";
+  const hermesTimeoutMs = Number(process.env.HERMES_TIMEOUT_MS || 45000);
 
   if (hermesUrl && hermesKey) {
+    const baseUrl = hermesUrl.replace(/\/+$/, "");
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 20000); // 20 segundos de timeout
+    const t = setTimeout(() => ctrl.abort(), hermesTimeoutMs);
     try {
       const promptSistema = `
 Eres 'Agente Establo' 🥩🔥, el maestro parrillero y asesor comercial estrella de 'Parrilladas El Establo' en Trujillo, Perú.
@@ -386,7 +390,7 @@ ${historialPrevio
   .join("\n")}
 `;
 
-      const r = await fetch(`${hermesUrl}/chat/completions`, {
+      const r = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",
         signal: ctrl.signal,
         headers: {
@@ -394,7 +398,7 @@ ${historialPrevio
           Authorization: `Bearer ${hermesKey}`,
         },
         body: JSON.stringify({
-          model: "hermes-agent",
+          model: hermesModel,
           messages: [
             { role: "system", content: promptSistema },
             ...historialPrevio.slice(-3).map((h) => ({
@@ -407,31 +411,51 @@ ${historialPrevio
         }),
       });
 
-      const d = await r.json();
-      const aiText = d?.choices?.[0]?.message?.content;
+      const rawBody = await r.text();
 
-      if (aiText) {
-        await toolRegistrarAccionAgente({
-          id_negociacion: idNegociacion,
-          accion: "RESPONDER_WHATSAPP",
-          detalle: `Respuesta generada por Hermes Agent para ${nombreCliente}`,
-          resultado: "EXITOSO",
-        });
-
-        return {
-          mensaje: aiText,
-          sugerenciasComerciales: [
-            "Confirmar medio de pago (Yape / Plin / Tarjeta)",
-            "Consultar si requiere reserva de mesa en Trujillo",
-            "Ofrecer guarnición o bebida adicional",
-          ],
-          accionTomada: `Hermes Agent Response`,
-        };
-      } else {
+      if (!r.ok) {
         console.warn(
-          "[Agente IA] Hermes API sin respuesta válida, activando heurístico de respaldo:",
-          d,
+          `[Agente IA] Hermes respondió HTTP ${r.status}. Revisa URL/KEY/modelo (${hermesModel}):`,
+          rawBody.slice(0, 400),
         );
+      } else {
+        let d: any = null;
+        try {
+          d = JSON.parse(rawBody);
+        } catch {
+          d = null;
+        }
+
+        const aiText = d?.choices?.[0]?.message?.content;
+
+        if (aiText) {
+          console.log(
+            `[Agente IA] Hermes OK (modelo ${hermesModel}) para ${nombreCliente}`,
+          );
+
+          await toolRegistrarAccionAgente({
+            id_negociacion: idNegociacion,
+            accion: "RESPONDER_WHATSAPP",
+            detalle: `Respuesta generada por Hermes Agent (${hermesModel}) para ${nombreCliente}`,
+            resultado: "EXITOSO",
+          });
+
+          return {
+            mensaje: aiText,
+            sugerenciasComerciales: [
+              "Confirmar medio de pago (Yape / Plin / Tarjeta)",
+              "Consultar si requiere reserva de mesa en Trujillo",
+              "Ofrecer guarnición o bebida adicional",
+            ],
+            accionTomada: `Hermes Agent Response`,
+            motor: "HERMES",
+          };
+        } else {
+          console.warn(
+            "[Agente IA] Hermes respondió sin choices válidas, activando heurístico de respaldo:",
+            rawBody.slice(0, 400),
+          );
+        }
       }
     } catch (err) {
       console.warn(

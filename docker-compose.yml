@@ -34,19 +34,33 @@ services:
       DB_SERVER: database
       DB_PORT: "1433"
       DB_NAME: buyer
-      DB_USER: sa
+      DB_USER: ${DB_USER:-sa}
       DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+      # Opcional: al crear establo_app, define DB_USER=establo_app y DB_APP_PASSWORD.
+      # db.ts prefiere DB_APP_PASSWORD sobre DB_PASSWORD.
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-}
       WHAPI_TOKEN: ${WHAPI_TOKEN:?Define WHAPI_TOKEN}
       WHAPI_API_URL: https://gate.whapi.cloud
       WHAPI_WEBHOOK_TOKEN: ${WHAPI_WEBHOOK_TOKEN:?Define WHAPI_WEBHOOK_TOKEN}
       HERMES_API_URL: ${HERMES_API_URL:-}
       HERMES_API_KEY: ${HERMES_API_KEY:-}
+      HERMES_MODEL: ${HERMES_MODEL:-hermes-agent}
+      HERMES_TIMEOUT_MS: ${HERMES_TIMEOUT_MS:-45000}
+      CAPTACION_URL: ${CAPTACION_URL:-https://elestablo.pe/captacion}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
       TZ: America/Lima
     depends_on:
       database:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://localhost:3000/api/config >/dev/null 2>&1 || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks: [establo-network, dokploy-network]
 
 networks:

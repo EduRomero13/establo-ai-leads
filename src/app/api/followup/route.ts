@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { executeQuery, sql } from "@/lib/db";
 import { toolRegistrarAccionAgente } from "@/lib/ai-agent";
-import { enviarMensajeWhatsAppOficial } from "@/lib/whatsapp-service";
+import { enviarMensajeWhatsApp } from "@/lib/whatsapp-service";
 
 // Clasificación de tiempo sin respuesta
 function clasificarTiempo(horas: number): {
@@ -189,9 +189,9 @@ export async function POST(request: Request) {
       `, { idP: { type: sql.Int, value: id_personal } });
       const trabajador = personalData[0] || { nombres: "Asesor Comercial" };
 
-      // 1. Enviar el mensaje a través de la API oficial de WhatsApp Cloud
+      // 1. Enviar el mensaje por el proveedor activo (Whapi si está configurado, si no Meta)
       console.log(`[Seguimiento Trabajador] Enviando WhatsApp a ${lead.nombres} (${telefonoDestino}) por trabajador: ${trabajador.nombres}`);
-      const resWhatsApp = await enviarMensajeWhatsAppOficial({
+      const resWhatsApp = await enviarMensajeWhatsApp({
         telefonoDestino,
         texto: mensaje.trim(),
       });
@@ -228,12 +228,12 @@ export async function POST(request: Request) {
       }
 
       await executeQuery(`
-        INSERT INTO dbo.mensaje_whatsapp (id_sesion, direccion, tipo, contenido, estado, fecha_mensaje, id_mensaje_meta)
-        VALUES (@idSes, 'SALIENTE', 'TEXTO', @contenido, 'ENVIADO', SYSUTCDATETIME(), @wamid);
+        INSERT INTO dbo.mensaje_whatsapp (id_sesion, wamid, direccion, tipo, contenido, fecha_mensaje, estado_entrega)
+        VALUES (@idSes, @wamid, 'SALIENTE', 'TEXTO', @contenido, SYSUTCDATETIME(), 'ENVIADO');
       `, {
         idSes: { type: sql.BigInt, value: idSesion },
         contenido: { type: sql.NVarChar(sql.MAX), value: mensaje.trim() },
-        wamid: { type: sql.VarChar(120), value: resWhatsApp.wamid || `wamid.TRAB_${Date.now()}` },
+        wamid: { type: sql.VarChar(200), value: resWhatsApp.wamid || `wamid.TRAB_${Date.now()}` },
       });
 
       // 3. Registrar la acción de seguimiento del trabajador en dbo.accion_agente

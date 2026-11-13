@@ -6,6 +6,7 @@
 
 # Next.js build output
 /.next/
+*.tsbuildinfo
 /out/
 
 # Production

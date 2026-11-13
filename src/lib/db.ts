@@ -3,9 +3,13 @@ import sql from "mssql";
 let pool: sql.ConnectionPool | null = null;
 
 export function getDbConfig(): sql.config {
-  const password = process.env.DB_PASSWORD;
+  // DB_APP_PASSWORD permite usar el usuario de mínimos privilegios (establo_app)
+  // sin cambiar la contraseña de 'sa'. Si no existe, cae a DB_PASSWORD.
+  const password = process.env.DB_APP_PASSWORD || process.env.DB_PASSWORD;
   if (!password) {
-    throw new Error("[SQL Server] Falta la variable de entorno DB_PASSWORD.");
+    throw new Error(
+      "[SQL Server] Falta la variable de entorno DB_APP_PASSWORD o DB_PASSWORD.",
+    );
   }
 
   return {

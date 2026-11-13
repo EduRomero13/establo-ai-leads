@@ -5,6 +5,19 @@ export async function GET() {
   try {
     const dbHealth = await checkDbHealth();
 
+    const hermesUrl = process.env.HERMES_API_URL?.trim() || "";
+    const hermesKey = process.env.HERMES_API_KEY?.trim() || "";
+    const hermesModel = process.env.HERMES_MODEL?.trim() || "hermes-agent";
+    const hermesConfigurado = Boolean(hermesUrl && hermesKey);
+
+    const whapiToken = process.env.WHAPI_TOKEN?.trim() || "";
+    const metaToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim() || "";
+    const proveedorWhatsApp = whapiToken
+      ? "WHAPI"
+      : metaToken
+        ? "META_CLOUD_API"
+        : "DEMO";
+
     const configInfo = {
       sistema: {
         nombre: "ESTABLO AI — Sistema Inteligente de Gestión y Conversión de LEADS",
@@ -25,16 +38,28 @@ export async function GET() {
         kpiMensualDetectado: dbHealth.kpiSummary || [],
       },
       inteligenciaArtificial: {
-        proveedor: "Google Gemini / Copiloto Heurístico Experto",
-        modelo: process.env.GEMINI_MODEL || "gemini-1.5-flash",
-        apiKeyConfigurada: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "DEMO"),
-        modoActual: process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "DEMO" 
-          ? "Gemini API en Vivo" 
+        proveedor: "Hermes Agent / Copiloto Heurístico Experto",
+        hermesConfigurado,
+        hermesUrl: hermesConfigurado ? hermesUrl : null,
+        modelo: hermesModel,
+        timeoutMs: Number(process.env.HERMES_TIMEOUT_MS || 45000),
+        motorActual: hermesConfigurado ? "HERMES (con respaldo heurístico)" : "HEURISTICO",
+        modoActual: hermesConfigurado
+          ? "Hermes Agent en Vivo"
           : "Modo Demostración Inteligente Autónomo (Heurístico con Reglas de Negocio V3)",
       },
       whatsapp: {
-        modo: process.env.WHATSAPP_DEMO_MODE === "false" ? "API Cloud Oficial" : "Motor Comercial El Establo",
-        webhookVerificado: true,
+        proveedor: proveedorWhatsApp,
+        modo:
+          proveedorWhatsApp === "WHAPI"
+            ? "Whapi.Cloud (gate.whapi.cloud)"
+            : proveedorWhatsApp === "META_CLOUD_API"
+              ? "WhatsApp Cloud API Oficial (Meta)"
+              : "Modo Demostración (sin envío real)",
+        webhookPath: "/api/webhook/whapi",
+        webhookTokenConfigurado: Boolean(
+          (process.env.WHAPI_WEBHOOK_TOKEN || process.env.WHAPI_WEBHOOK_SECRET || "").trim(),
+        ),
         canalNegociacion: "sesion_whatsapp + mensaje_whatsapp",
       },
       reglasNegocio: {
@@ -53,4 +78,3 @@ export async function GET() {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

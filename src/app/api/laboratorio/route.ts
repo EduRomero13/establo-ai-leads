@@ -184,16 +184,19 @@ export async function GET() {
     `;
     const kpisOficiales = await executeQuery<any>(queryKpis);
 
-    // 3. Estado de la integración de WhatsApp Cloud API
+    // 3. Estado de las integraciones reales (Whapi + Hermes)
     const whatsappStatus = {
-      conectado: true,
-      demoMode: process.env.WHATSAPP_DEMO_MODE === "true",
-      webhookUrl: "https://conclude-fanatic-staining.ngrok-free.dev/api/webhook/whatsapp",
+      proveedor: process.env.WHAPI_TOKEN ? "WHAPI" : "META_CLOUD_API",
+      conectado: Boolean(process.env.WHAPI_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN),
+      demoMode: !process.env.WHAPI_TOKEN && !process.env.WHATSAPP_ACCESS_TOKEN,
+      webhookUrl: "/api/webhook/whapi",
       version: process.env.WHATSAPP_API_VERSION || "v21.0",
       phoneIdConfigurado: !!process.env.WHATSAPP_PHONE_NUMBER_ID,
-      tokenConfigurado: !!process.env.WHATSAPP_ACCESS_TOKEN,
-      geminiConfigurado: !!process.env.GEMINI_API_KEY,
-      modeloGemini: process.env.GEMINI_MODEL || "gemini-3.5-flash",
+      tokenConfigurado: Boolean(process.env.WHAPI_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN),
+      hermesConfigurado: Boolean(
+        process.env.HERMES_API_URL?.trim() && process.env.HERMES_API_KEY?.trim(),
+      ),
+      modeloHermes: process.env.HERMES_MODEL || "hermes-agent",
     };
 
     return NextResponse.json({
@@ -336,7 +339,11 @@ Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro eq
         preferenciaUtilizada: preferencias?.producto_favorito_declarado || "Carta general",
         corteTopSegmento: productos[0]?.nombre || "Picaña",
         comboTopSegmento: combos[0]?.nombre || "Combo Estudiante",
-        modeloUsado: process.env.GEMINI_MODEL || "gemini-3.5-flash",
+        motor: respuestaAgente.motor || "HEURISTICO",
+        modeloUsado:
+          respuestaAgente.motor === "HERMES"
+            ? process.env.HERMES_MODEL || "hermes-agent"
+            : "MOTOR_HEURISTICO_LOCAL",
       },
     });
   } catch (error: any) {

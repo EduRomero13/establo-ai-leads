@@ -64,10 +64,13 @@ export function mapearTipoMensaje(tipoOriginal?: string | null): TipoMensajeVali
     case 'button':
     case 'button_reply':
     case 'botones':
+    case 'buttons':
       return 'BOTONES';
     case 'interactive':
     case 'interactivo':
     case 'list_reply':
+    case 'reply':
+    case 'list':
       return 'INTERACTIVO';
     case 'image':
     case 'imagen':
@@ -215,17 +218,28 @@ async function enviarMensajeWhapi(params: {
 }): Promise<{ success: boolean; wamid?: string; error?: string }> {
   try {
     const token = process.env.WHAPI_TOKEN;
-    const apiUrl = process.env.WHAPI_API_URL || "https://gate.whapi.cloud";
-    
-    // Whapi usa el número con código de país sin el "+" usualmente, o con él. 
-    // Aseguramos formato internacional
-    const telDigits = params.telefonoDestino.replace(/\D/g, "");
-    const to = telDigits.startsWith("51") ? telDigits : `51${telDigits}`;
+    const apiUrl = (process.env.WHAPI_API_URL || "https://gate.whapi.cloud").replace(/\/+$/, "");
+
+    // Acepta tanto un teléfono (51948834920) como un chat_id completo
+    // (51948834920@s.whatsapp.net). Si es teléfono, se normaliza a Perú (+51).
+    const rawDestino = String(params.telefonoDestino || "").trim();
+    let to: string;
+
+    if (rawDestino.includes("@")) {
+      to = rawDestino;
+    } else {
+      const telDigits = rawDestino.replace(/\D/g, "");
+      if (telDigits.length < 8) {
+        return { success: false, error: `Teléfono de destino inválido: "${rawDestino}"` };
+      }
+      const conPais = telDigits.startsWith("51") ? telDigits : `51${telDigits}`;
+      to = `${conPais}@s.whatsapp.net`;
+    }
 
     const url = `${apiUrl}/messages/text`;
     const payload = {
       typing_time: 0,
-      to: `${to}@s.whatsapp.net`,
+      to,
       body: params.texto
     };
 
@@ -239,12 +253,16 @@ async function enviarMensajeWhapi(params: {
     });
 
     const data = await res.json();
-    if (!res.ok) {
-      console.error("[Whapi Error]:", data);
-      return { success: false, error: data?.error?.message || "Error al enviar mensaje vía Whapi" };
+    if (!res.ok || data?.sent === false) {
+      console.error("[Whapi Error]:", res.status, data);
+      return {
+        success: false,
+        error: data?.error?.message || `Error al enviar mensaje vía Whapi (HTTP ${res.status})`,
+      };
     }
 
     const wamid = data?.message?.id;
+    console.log(`[Whapi OK] Mensaje enviado a ${to} (wamid=${wamid || "sin id"})`);
     return { success: true, wamid };
   } catch (err: any) {
     console.error("[Whapi Send Exception]:", err);
@@ -408,17 +426,27 @@ export async function procesarMensajeEntrante(params: {
   // 5. Tarea asíncrona desacoplada: Generar respuesta inteligente del Agente IA
   // Si no está registrado como LEAD, invitar cordial al formulario de captación sin inventar negociación
   if (!persona || !idNegociacion) {
+    const captacionUrl =
+      process.env.CAPTACION_URL?.trim() || "https://elestablo.pe/captacion";
     const textoNoLead = `¡Hola! Bienvenido a Parrilladas El Establo 🥩🔥
 
 Para darte promociones exclusivas y asesorarte a tu gusto, regístrate en segundos aquí:
-👉 https://elestablo.pe/captacion
+👉 ${captacionUrl}
 
 ¡Apenas lo envíes, nuestro asesor te atenderá con los mejores cortes a la leña! 🤤🚀`;
+
+    console.log(
+      `[WhatsApp] Contacto sin lead/negociación (${telefonoNorm}). Enviando enlace de captación.`,
+    );
 
     const envio = await enviarMensajeWhatsApp({
       telefonoDestino: params.remitenteRaw,
       texto: textoNoLead,
     });
+
+    if (!envio.success) {
+      console.error(`[WhatsApp] No se pudo enviar el enlace de captación: ${envio.error}`);
+    }
 
     if (envio.success) {
       await executeQuery(
