@@ -192,7 +192,7 @@ export async function POST(request: Request) {
        FROM dbo.sesion_whatsapp
        WHERE telefono_cliente = @telE164
           OR REPLACE(REPLACE(telefono_cliente, '+', ''), ' ', '') LIKE '%' + @tel9
-       ORDER BY fecha_ultima_actividad DESC;`,
+       ORDER BY fecha_ultimo_mensaje DESC;`,
       {
         telE164: { type: sql.VarChar(20), value: formatoE164 },
         tel9: { type: sql.VarChar(20), value: digitos9 },
@@ -222,7 +222,15 @@ export async function POST(request: Request) {
     }
     const resumenInicial = resumenPartes.join(" ");
 
-    // 5. Verificar si ya existe una negociación ABIERTA para no duplicar ciclo
+    // 5. Determinar la plataforma de origen (el formulario es una landing web)
+    const plataformaRes = await executeQuery<{ id_plataforma: number }>(
+      `SELECT TOP 1 id_plataforma
+       FROM dbo.plataforma
+       ORDER BY CASE WHEN codigo = 'LANDING_PAGE' THEN 0 ELSE 1 END, id_plataforma;`
+    );
+    const idPlataforma = plataformaRes[0]?.id_plataforma ?? null;
+
+    // 6. Verificar si ya existe una negociación ABIERTA para no duplicar ciclo
     const negAbiertas = await executeQuery<{ id_negociacion: number }>(
       `SELECT TOP 1 id_negociacion
        FROM dbo.negociacion
@@ -262,17 +270,69 @@ export async function POST(request: Request) {
       );
       const nextCiclo = cicloRes[0]?.next_ciclo || 1;
 
+      // El modelo exige que el ciclo 1 nazca de un formulario de captación:
+      // CK_negociacion_ciclo1 => (nro_ciclo = 1 AND id_formulario IS NOT NULL).
+      // Por eso creamos buyer + formulario_captacion antes de la negociación.
+      let idFormulario: number | null = null;
+      if (nextCiclo === 1) {
+        const insertBuyer = await executeQuery<{ id_buyer: number }>(
+          `INSERT INTO dbo.buyer (
+             id_persona, id_plataforma_origen, estado,
+             fecha_primer_contacto, fecha_conversion
+           )
+           OUTPUT INSERTED.id_buyer
+           VALUES (@idPersona, @idPlataforma, 'CONVERTIDO_LEAD', SYSUTCDATETIME(), SYSUTCDATETIME());`,
+          {
+            idPersona: { type: sql.BigInt, value: idPersona },
+            idPlataforma: { type: sql.Int, value: idPlataforma },
+          }
+        );
+        const idBuyer = insertBuyer[0].id_buyer;
+
+        const insertFormulario = await executeQuery<{ id_formulario: number }>(
+          `INSERT INTO dbo.formulario_captacion (
+             id_persona, id_buyer, id_plataforma_origen, id_sesion_whatsapp,
+             id_producto_favorito, id_segmento_declarado, fecha_envio,
+             acepta_politica_datos, acepta_marketing
+           )
+           OUTPUT INSERTED.id_formulario
+           VALUES (
+             @idPersona, @idBuyer, @idPlataforma, @idSesion,
+             @idProducto, @idSegmento, SYSUTCDATETIME(), 1, @consentMkt
+           );`,
+          {
+            idPersona: { type: sql.BigInt, value: idPersona },
+            idBuyer: { type: sql.BigInt, value: idBuyer },
+            idPlataforma: { type: sql.Int, value: idPlataforma },
+            idSesion: { type: sql.BigInt, value: idSesionWhatsapp },
+            idProducto: {
+              type: sql.Int,
+              value: Number.isFinite(idProductoFavorito as number) ? idProductoFavorito : null,
+            },
+            idSegmento: {
+              type: sql.Int,
+              value: Number.isFinite(idSegmento as number) ? idSegmento : null,
+            },
+            consentMkt: { type: sql.Bit, value: consentimientoMarketing ? 1 : 0 },
+          }
+        );
+        idFormulario = insertFormulario[0].id_formulario;
+      }
+
       const insertNeg = await executeQuery<{ id_negociacion: number }>(
         `INSERT INTO dbo.negociacion (
-           id_persona, id_sesion_whatsapp, nro_ciclo, fecha_inicio, estado, resumen
+           id_persona, id_sesion_whatsapp, id_formulario, nro_ciclo,
+           fecha_inicio, estado, resumen
          )
          OUTPUT INSERTED.id_negociacion
          VALUES (
-           @idPersona, @idSesion, @nroCiclo, SYSUTCDATETIME(), 'ABIERTA', @resumen
+           @idPersona, @idSesion, @idFormulario, @nroCiclo,
+           SYSUTCDATETIME(), 'ABIERTA', @resumen
          );`,
         {
           idPersona: { type: sql.BigInt, value: idPersona },
           idSesion: { type: sql.BigInt, value: idSesionWhatsapp },
+          idFormulario: { type: sql.BigInt, value: idFormulario },
           nroCiclo: { type: sql.Int, value: nextCiclo },
           resumen: { type: sql.NVarChar(1000), value: resumenInicial },
         }

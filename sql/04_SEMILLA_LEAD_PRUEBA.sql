@@ -76,11 +76,35 @@ IF NOT EXISTS (
 BEGIN
   DECLARE @ciclo int =
     ISNULL((SELECT MAX(nro_ciclo) FROM dbo.negociacion WHERE id_persona = @idPersona), 0) + 1;
+  DECLARE @idPlataforma int, @idBuyer bigint, @idFormulario bigint;
+
+  SELECT TOP 1 @idPlataforma = id_plataforma
+  FROM dbo.plataforma
+  ORDER BY CASE WHEN codigo = 'WHATSAPP' THEN 0 ELSE 1 END, id_plataforma;
+
+  -- CK_negociacion_ciclo1: el ciclo 1 exige id_formulario NOT NULL, y
+  -- formulario_captacion exige id_buyer. Por eso se crean buyer + formulario.
+  IF @ciclo = 1
+  BEGIN
+    INSERT INTO dbo.buyer
+      (id_persona, id_plataforma_origen, estado, fecha_primer_contacto, fecha_conversion)
+    VALUES
+      (@idPersona, @idPlataforma, 'CONVERTIDO_LEAD', SYSUTCDATETIME(), SYSUTCDATETIME());
+    SET @idBuyer = SCOPE_IDENTITY();
+
+    INSERT INTO dbo.formulario_captacion
+      (id_persona, id_buyer, id_plataforma_origen, id_sesion_whatsapp,
+       id_segmento_declarado, fecha_envio, acepta_politica_datos, acepta_marketing)
+    VALUES
+      (@idPersona, @idBuyer, @idPlataforma, @idSesion,
+       @idSegmento, SYSUTCDATETIME(), 1, 0);
+    SET @idFormulario = SCOPE_IDENTITY();
+  END
 
   INSERT INTO dbo.negociacion
-    (id_persona, id_sesion_whatsapp, nro_ciclo, fecha_inicio, estado, resumen)
+    (id_persona, id_sesion_whatsapp, id_formulario, nro_ciclo, fecha_inicio, estado, resumen)
   VALUES
-    (@idPersona, @idSesion, @ciclo, SYSUTCDATETIME(), 'ABIERTA',
+    (@idPersona, @idSesion, @idFormulario, @ciclo, SYSUTCDATETIME(), 'ABIERTA',
      N'Negociación de prueba para validar el Agente IA (Hermes)');
 
   PRINT '>> Negociación ABIERTA creada: ciclo ' + CAST(@ciclo AS varchar(10));
