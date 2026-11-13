@@ -149,15 +149,28 @@ BEGIN
         pr.tipo_beneficio,
         pr.valor_beneficio,
         -- 1. Veces ofrecida por el agente
-        COUNT(o.id_oferta) AS veces_ofrecida,
+        ISNULL(o.veces_ofrecida, 0) AS veces_ofrecida,
         -- 2. Veces aceptada preliminarmente
-        SUM(CASE WHEN o.respuesta = 'ACEPTADA' THEN 1 ELSE 0 END) AS veces_aceptada,
+        ISNULL(o.veces_aceptada, 0) AS veces_aceptada,
         -- 3. Veces efectivamente aplicada en un pedido facturado
-        COUNT(DISTINCT pd.id_pedido) AS veces_utilizada_pedido
+        ISNULL(pd.veces_utilizada_pedido, 0) AS veces_utilizada_pedido
     FROM dbo.promocion pr
-    LEFT JOIN dbo.oferta_negociacion o ON o.id_promocion = pr.id_promocion
-    LEFT JOIN dbo.pedido pd ON pd.id_promocion = pr.id_promocion AND pd.estado <> 'ANULADO'
-    GROUP BY pr.id_promocion, pr.nombre_promocion, pr.tipo_beneficio, pr.valor_beneficio
+    -- Se agrega cada fuente por separado: unir oferta_negociacion y pedido en el
+    -- mismo SELECT produce producto cartesiano e infla los conteos.
+    LEFT JOIN (
+        SELECT id_promocion,
+               COUNT(id_oferta) AS veces_ofrecida,
+               SUM(CASE WHEN respuesta = 'ACEPTADA' THEN 1 ELSE 0 END) AS veces_aceptada
+        FROM dbo.oferta_negociacion
+        WHERE id_promocion IS NOT NULL
+        GROUP BY id_promocion
+    ) o ON o.id_promocion = pr.id_promocion
+    LEFT JOIN (
+        SELECT id_promocion, COUNT(DISTINCT id_pedido) AS veces_utilizada_pedido
+        FROM dbo.pedido
+        WHERE estado <> 'ANULADO' AND id_promocion IS NOT NULL
+        GROUP BY id_promocion
+    ) pd ON pd.id_promocion = pr.id_promocion
     ORDER BY veces_ofrecida DESC, veces_utilizada_pedido DESC;
 END;
 GO
@@ -203,6 +216,9 @@ BEGIN
     SET NOCOUNT ON;
 
     -- Catálogo oficial de pesos y gramajes
+    -- NOTA: el filtro por segmento y por pedido no anulado debe aplicarse sobre
+    -- las ventas (subconsulta), no dentro de un LEFT JOIN: dentro del JOIN no
+    -- filtra la agregación y las cantidades de pedidos ANULADOS se seguían contando.
     SELECT 
         pr.id_producto,
         pr.nombre,
@@ -212,12 +228,16 @@ BEGIN
         pr.precio,
         pr.estilo,
         -- Unidades vendidas en el segmento si se especifica
-        ISNULL(SUM(d.cantidad), 0) AS unidades_vendidas
+        ISNULL(SUM(v.cantidad), 0) AS unidades_vendidas
     FROM dbo.producto_carta pr
-    LEFT JOIN dbo.pedido_detalle d ON d.id_producto = pr.id_producto
-    LEFT JOIN dbo.pedido pd ON pd.id_pedido = d.id_pedido AND pd.estado <> 'ANULADO'
-    LEFT JOIN dbo.persona pe ON pe.id_persona = pd.id_persona 
-        AND (@id_segmento IS NULL OR pe.id_segmento = @id_segmento)
+    LEFT JOIN (
+        SELECT d.id_producto, d.cantidad
+        FROM dbo.pedido_detalle d
+        JOIN dbo.pedido pd ON pd.id_pedido = d.id_pedido
+        JOIN dbo.persona pe ON pe.id_persona = pd.id_persona
+        WHERE pd.estado <> 'ANULADO'
+          AND (@id_segmento IS NULL OR pe.id_segmento = @id_segmento)
+    ) v ON v.id_producto = pr.id_producto
     WHERE pr.activo = 1 AND pr.peso_cantidad IS NOT NULL
     GROUP BY pr.id_producto, pr.nombre, pr.categoria, pr.peso_cantidad, pr.peso_unidad, pr.precio, pr.estilo
     ORDER BY pr.peso_cantidad ASC, unidades_vendidas DESC;

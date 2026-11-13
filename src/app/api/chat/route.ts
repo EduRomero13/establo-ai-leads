@@ -215,7 +215,7 @@ export async function POST(request: Request) {
 
       // Obtener negociación y persona
       const negData = await executeQuery<any>(
-        `SELECT n.id_negociacion, n.id_persona, n.id_pedido, n.id_sesion_whatsapp, p.nombres, p.apellidos, s.telefono_cliente
+        `SELECT n.id_negociacion, n.id_persona, n.id_pedido, n.id_sesion_whatsapp, n.estado, p.nombres, p.apellidos, s.telefono_cliente
          FROM dbo.negociacion n
          JOIN dbo.persona p ON p.id_persona = n.id_persona
          LEFT JOIN dbo.sesion_whatsapp s ON s.id_sesion = n.id_sesion_whatsapp
@@ -231,9 +231,36 @@ export async function POST(request: Request) {
       }
 
       const neg = negData[0];
+
+      // Guarda de coherencia (CK_negociacion_estado): una negociación PERDIDA
+      // conserva motivo_perdida, por lo que no puede pasar a CONVERTIDA.
+      if (neg.estado === "PERDIDA") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "La negociación está cerrada como PERDIDA; no procede la conversión.",
+          },
+          { status: 409 },
+        );
+      }
+
       let idPedido = neg.id_pedido;
 
-      // 1. Si no tiene pedido vinculado, crear uno en estado CONFIRMADO
+      // 0. Resolver el medio de pago por código (YAPE/PLIN/EFECTIVO/TARJETA).
+      //    Antes se hardcodeaba id_medio_pago=1 (YAPE) ignorando el parámetro medioPago.
+      const mpData = await executeQuery<{ id_medio_pago: number }>(
+        `SELECT TOP 1 id_medio_pago FROM dbo.medio_pago WHERE codigo = @codigo;`,
+        {
+          codigo: {
+            type: sql.VarChar(20),
+            value: String(medioPago).toUpperCase(),
+          },
+        },
+      );
+      const idMedioPago = mpData[0]?.id_medio_pago || 1;
+
+      // 1. Si no tiene pedido vinculado, crear uno en estado PAGADO
       if (!idPedido) {
         const resPed = await executeQuery<{ id_pedido: number }>(
           `
@@ -258,19 +285,37 @@ export async function POST(request: Request) {
         );
       }
 
-      // 2. Registrar el pago en dbo.pago
-      const resPago = await executeQuery<{ id_pago: number }>(
+      // 2. Registrar el pago en dbo.pago (IDEMPOTENTE: si ya existe un pago
+      //    CONFIRMADO para el pedido, se reutiliza en lugar de duplicarlo).
+      const pagoExistente = await executeQuery<{ id_pago: number }>(
         `
-        INSERT INTO dbo.pago (id_pedido, id_medio_pago, monto, moneda, fecha_pago, estado, referencia)
-        VALUES (@idPedido, 1, @monto, 'PEN', SYSUTCDATETIME(), 'CONFIRMADO', @ref);
-        SELECT SCOPE_IDENTITY() AS id_pago;
+        SELECT TOP 1 id_pago FROM dbo.pago
+        WHERE id_pedido = @idPedido AND estado = 'CONFIRMADO'
+        ORDER BY id_pago DESC;
       `,
-        {
-          idPedido: { type: sql.BigInt, value: idPedido },
-          monto: { type: sql.Decimal(10, 2), value: monto },
-          ref: { type: sql.VarChar(100), value: `PAGO_YAPE_${Date.now()}` },
-        },
+        { idPedido: { type: sql.BigInt, value: idPedido } },
       );
+
+      let idPago: number | undefined = pagoExistente[0]?.id_pago;
+      if (!idPago) {
+        const resPago = await executeQuery<{ id_pago: number }>(
+          `
+          INSERT INTO dbo.pago (id_pedido, id_medio_pago, monto, moneda, fecha_pago, estado, referencia)
+          VALUES (@idPedido, @idMedioPago, @monto, 'PEN', SYSUTCDATETIME(), 'CONFIRMADO', @ref);
+          SELECT SCOPE_IDENTITY() AS id_pago;
+        `,
+          {
+            idPedido: { type: sql.BigInt, value: idPedido },
+            idMedioPago: { type: sql.Int, value: idMedioPago },
+            monto: { type: sql.Decimal(10, 2), value: monto },
+            ref: {
+              type: sql.VarChar(100),
+              value: `PAGO_${String(medioPago).toUpperCase()}_${Date.now()}`,
+            },
+          },
+        );
+        idPago = resPago[0]?.id_pago;
+      }
 
       // 3. Actualizar la negociación a CONVERTIDA con fecha_primer_pago
       await executeQuery(
@@ -294,18 +339,44 @@ export async function POST(request: Request) {
         { idPersona: { type: sql.BigInt, value: neg.id_persona } },
       );
 
+      // 4.b Registrar la transición en historial_fases (idempotente).
+      // CK_historial_coherencia exige id_negociacion e id_pedido NOT NULL para PAYER.
+      const historialPayer = await executeQuery<{ id_historial: number }>(
+        `
+        SELECT TOP 1 id_historial FROM dbo.historial_fases
+        WHERE id_persona = @idPersona AND fase = 'PAYER' AND id_pedido = @idPedido;
+      `,
+        {
+          idPersona: { type: sql.BigInt, value: neg.id_persona },
+          idPedido: { type: sql.BigInt, value: idPedido },
+        },
+      );
+      if (historialPayer.length === 0) {
+        await executeQuery(
+          `
+          INSERT INTO dbo.historial_fases (id_persona, fase, fecha_cambio, id_negociacion, id_pedido)
+          VALUES (@idPersona, 'PAYER', SYSUTCDATETIME(), @idNeg, @idPedido);
+        `,
+          {
+            idPersona: { type: sql.BigInt, value: neg.id_persona },
+            idNeg: { type: sql.BigInt, value: id_negociacion },
+            idPedido: { type: sql.BigInt, value: idPedido },
+          },
+        );
+      }
+
       // 5. Registrar acción del agente
       await toolRegistrarAccionAgente({
         id_negociacion,
         id_sesion_whatsapp: neg.id_sesion_whatsapp,
         accion: "CONVERTIR_LEAD_A_PAYER",
-        detalle: `Pago confirmado de S/ ${monto} vía Yape. Conversión exitosa.`,
+        detalle: `Pago confirmado de S/ ${monto} vía ${String(medioPago).toUpperCase()}. Conversión exitosa.`,
         resultado: "EXITOSO",
       });
 
       // 6. Si hay teléfono y se solicita WhatsApp, enviar confirmación oficial
       if (enviarWhatsAppReal && neg.telefono_cliente) {
-        const textoConfirmacion = `¡Excelente noticia, ${neg.nombres}! 🎉💳 Hemos verificado tu anticipo de S/ ${Number(monto).toFixed(2)} por Yape al instante.
+        const textoConfirmacion = `¡Excelente noticia, ${neg.nombres}! 🎉💳 Hemos verificado tu anticipo de S/ ${Number(monto).toFixed(2)} por ${String(medioPago).toUpperCase()} al instante.
 
 Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro equipo en Trujillo ya tiene la orden lista para servirte calientito. ¡Muchas gracias por tu compra en Parrilladas El Establo! 🥩✨`;
 
@@ -335,7 +406,7 @@ Tu pedido ha quedado *CONFIRMADO* en nuestro sistema parrillero 🔥. Nuestro eq
       return NextResponse.json({
         success: true,
         mensaje: "Conversión registrada exitosamente",
-        id_pago: resPago[0]?.id_pago,
+        id_pago: idPago,
         id_pedido: idPedido,
       });
     }

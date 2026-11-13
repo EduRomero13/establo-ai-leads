@@ -149,7 +149,7 @@ const MCP_TOOLS_CATALOG = [
   },
   {
     name: "registrar_pedido",
-    description: "Crea una comanda oficial en estado PENDIENTE vinculada a la negociación del cliente.",
+    description: "Crea una comanda oficial en estado REGISTRADO vinculada a la negociación del cliente.",
     inputSchema: {
       type: "object",
       properties: {
@@ -291,6 +291,7 @@ async function ejecutarHerramientaMCP(name: string, args: any): Promise<any> {
     }
 
     case "registrar_pedido": {
+      const tipoPedido = args.tipo === "RESERVA" ? "RESERVA" : "LOCAL";
       const resPed = await executeQuery<{ id_pedido: number }>(`
         INSERT INTO dbo.pedido (id_persona, id_negociacion, tipo, fecha_registro, estado, subtotal, descuento, total)
         VALUES (@idP, @idNeg, @tipo, SYSUTCDATETIME(), 'REGISTRADO', @subtotal, 0, @subtotal);
@@ -298,7 +299,7 @@ async function ejecutarHerramientaMCP(name: string, args: any): Promise<any> {
       `, {
         idP: { type: sql.BigInt, value: args.id_persona },
         idNeg: { type: sql.BigInt, value: args.id_negociacion },
-        tipo: { type: sql.VarChar(20), value: args.tipo || "LOCAL" },
+        tipo: { type: sql.VarChar(20), value: tipoPedido },
         subtotal: { type: sql.Decimal(10, 2), value: args.subtotal },
       });
       return { success: true, id_pedido: resPed[0]?.id_pedido, estado: "REGISTRADO" };

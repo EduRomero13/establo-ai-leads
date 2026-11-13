@@ -1070,6 +1070,7 @@ ${historialPrevio
 
       try {
         await toolRegistrarOfertaLead(idNegociacion, {
+          idProducto: preferencias?.id_producto_favorito || 1,
           detalle: `Recomendación personalizada basada en favorito SQL: ${fav} (S/ ${precioFav.toFixed(2)})`,
         });
       } catch (e) {}

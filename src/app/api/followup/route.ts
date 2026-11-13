@@ -119,7 +119,7 @@ export async function GET() {
         COALESCE(AVG(p.total), 0) AS ticket_promedio,
         MAX(p.fecha_registro) AS ultimo_cierre
       FROM dbo.personal per
-      LEFT JOIN dbo.pedido p ON p.id_personal_atiende = per.id_personal AND p.estado IN ('ATENDIDO', 'CONFIRMADO', 'PAGADO')
+      LEFT JOIN dbo.pedido p ON p.id_personal_atiende = per.id_personal AND p.estado IN ('ATENDIDO', 'PAGADO')
       WHERE per.es_agente_ia = 0 AND per.activo = 1
       GROUP BY per.id_personal, per.nombres, per.apellidos, per.cargo, per.area
       ORDER BY ventas_cerradas DESC, monto_total DESC;

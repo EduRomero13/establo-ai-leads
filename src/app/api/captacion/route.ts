@@ -220,7 +220,7 @@ export async function POST(request: Request) {
     if (notas) {
       resumenPartes.push(`Notas del cliente: ${notas}`);
     }
-    const resumenInicial = resumenPartes.join(" ");
+    const resumenInicial = resumenPartes.join(" ").slice(0, 500);
 
     // 5. Determinar la plataforma de origen (el formulario es una landing web)
     const plataformaRes = await executeQuery<{ id_plataforma: number }>(
@@ -258,7 +258,7 @@ export async function POST(request: Request) {
           idSesion: { type: sql.BigInt, value: idSesionWhatsapp },
           notas: { type: sql.NVarChar(500), value: notas },
           nroPersonas: { type: sql.Int, value: nroPersonas },
-          resumen: { type: sql.NVarChar(1000), value: resumenInicial },
+          resumen: { type: sql.NVarChar(500), value: resumenInicial },
         }
       );
     } else {
@@ -334,7 +334,7 @@ export async function POST(request: Request) {
           idSesion: { type: sql.BigInt, value: idSesionWhatsapp },
           idFormulario: { type: sql.BigInt, value: idFormulario },
           nroCiclo: { type: sql.Int, value: nextCiclo },
-          resumen: { type: sql.NVarChar(1000), value: resumenInicial },
+          resumen: { type: sql.NVarChar(500), value: resumenInicial },
         }
       );
       idNegociacion = insertNeg[0].id_negociacion;
