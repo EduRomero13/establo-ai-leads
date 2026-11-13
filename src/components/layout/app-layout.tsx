@@ -1,11 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
 
+const PUBLIC_ROUTES = ["/captacion"];
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+    pathname?.startsWith(route)
+  );
+
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#121416] transition-colors">
