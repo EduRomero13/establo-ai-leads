@@ -63,6 +63,37 @@ done
 Cada contenedor debe listar `dokploy-network`. Si `app` o el contenedor de Hermes **no**
 lo muestran, ese es el problema.
 
+### El nombre DNS NO es el del proyecto, es el del *servicio*
+
+Error muy común. Aunque ambos contenedores estén en `dokploy-network`, el nombre que
+resuelve el DNS de Docker es el **alias**, y los alias son:
+
+```
+dokploy-network [eduardo-hermes-r0f6ph-hermes-1 hermes]
+                  ^ nombre del contenedor      ^ nombre del SERVICIO
+```
+
+- ✅ Resuelve: `hermes` (el nombre del servicio en el compose).
+- ❌ **No** resuelve: `eduardo-hermes-r0f6ph` (eso es el *proyecto* de Dokploy, no un alias).
+
+Por eso `dns.lookup("eduardo-hermes-r0f6ph")` da `EAI_AGAIN` aunque la red esté bien.
+Usa el nombre del servicio:
+
+```env
+HERMES_API_URL=http://hermes:8642/v1
+```
+
+Compruébalo desde `app`:
+
+```sh
+node -e 'require("dns").lookup("hermes",(e,a)=>console.log("dns:",e?e.code:a))'
+```
+
+> Ojo con la clave al probar a mano: `"Bearer "+process.env.API_SERVER_KEY` usa la
+> variable **de Hermes**. En el contenedor `app` la variable se llama `HERMES_API_KEY`,
+> y si no existe verás `Bearer undefined` → `401`. Usa la clave literal o
+> `process.env.HERMES_API_KEY`.
+
 ### Corrección
 
 Ambos `docker-compose.yml` (el de la app y el de Hermes) deben declarar la red externa:
