@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import dns from "dns/promises";
 import { checkDbHealth, executeQuery } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,14 @@ export const dynamic = "force-dynamic";
 //   GET /api/health/integrations
 
 const TIMEOUT_MS = 8000;
+
+function describirError(error: any): string {
+  if (error?.name === "AbortError") return "Timeout (revisa red interna/puerto)";
+  const causa = error?.cause;
+  const codigo = causa?.code || error?.code;
+  const detalle = causa?.message || error?.message || "Error desconocido";
+  return codigo ? `${codigo}: ${detalle}` : detalle;
+}
 
 async function conTimeout<T>(
   tarea: (signal: AbortSignal) => Promise<T>,
@@ -84,6 +93,29 @@ async function verificarHermes(deep = false) {
 
   const baseUrl = url.replace(/\/+$/, "");
 
+  // Diagnóstico de red: ¿resuelve el hostname de Hermes desde el contenedor app?
+  const hostname = (() => {
+    try {
+      return new URL(baseUrl).hostname;
+    } catch {
+      return null;
+    }
+  })();
+
+  let dnsInfo: Record<string, any> = { host: hostname, resuelto: false };
+  if (hostname) {
+    try {
+      const address = await dns.lookup(hostname);
+      dnsInfo = { host: hostname, resuelto: true, ip: address.address, familia: address.family };
+    } catch (error: any) {
+      dnsInfo = {
+        host: hostname,
+        resuelto: false,
+        error: `${error?.code || "DNS"}: no se pudo resolver "${hostname}" desde el contenedor app`,
+      };
+    }
+  }
+
   // /models es una comprobación barata (no consume tokens de generación).
   // Un 404 aquí NO significa que Hermes esté caído: muchos servidores
   // OpenAI-compatibles solo exponen /chat/completions.
@@ -104,6 +136,7 @@ async function verificarHermes(deep = false) {
       httpStatus: res.status,
       url: baseUrl,
       modelo,
+      dns: dnsInfo,
       pista:
         res.status === 401
           ? "HTTP 401: HERMES_API_KEY no coincide con API_SERVER_KEY de Hermes"
@@ -161,7 +194,7 @@ async function verificarHermes(deep = false) {
           error:
             error?.name === "AbortError"
               ? "Timeout en /chat/completions (modelo lento o red interna)"
-              : error.message,
+              : describirError(error),
         };
         resultado.ok = false;
       }
@@ -175,10 +208,8 @@ async function verificarHermes(deep = false) {
       alcanzable: false,
       url: baseUrl,
       modelo,
-      error:
-        error?.name === "AbortError"
-          ? "Timeout al conectar con Hermes (revisa red interna/puerto)"
-          : error.message,
+      dns: dnsInfo,
+      error: describirError(error),
     };
   }
 }

@@ -23,6 +23,94 @@ para reconstruir la imagen `app`.
 
 ---
 
+## 0.1 Síntoma típico: `EAI_AGAIN` y `404 page not found` de Traefik
+
+Si desde la terminal de `app` ves esto:
+
+```sh
+node -e 'require("dns").lookup("NOMBRE_HERMES",(e,a)=>console.log(e?e.code:a))'
+# EAI_AGAIN
+
+node -e 'fetch("http://TU_DOMINIO/api/webhook/whapi").then(async r=>console.log(r.status,await r.text()))'
+# 404 404 page not found
+```
+
+los dos síntomas tienen **una sola causa**: el contenedor `app` (y/o Hermes) **no está en la
+red `dokploy-network`**. Esa red es la que comparten **Traefik** (enrutado de dominios) y
+los demás servicios; sin ella:
+
+- Traefik no encuentra un *router* para el dominio → responde su propio
+  `404 page not found` (texto plano, **no** es el 404 de Next.js).
+- El DNS interno de Docker no resuelve el nombre del otro contenedor → `EAI_AGAIN`
+  (fallo temporal de resolución; `ENOTFOUND` es "no existe", `EAI_AGAIN` es "no puedo
+  resolverlo desde mis redes").
+
+> `404 page not found` con esa redacción exacta = **Traefik**, nunca Next.js.
+> Si viera la página HTML "This page could not be found", entonces sí sería la app.
+
+### Comprobación en el host de Dokploy (ahí sí hay `docker`)
+
+```sh
+docker ps --format '{{.Names}}' | grep -Ei 'agente|hermes|traefik'
+
+# ¿Cada contenedor está en dokploy-network?
+for c in $(docker ps --format '{{.Names}}' | grep -Ei 'agente|hermes|traefik'); do
+  echo -n "$c -> "
+  docker inspect "$c" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+done
+```
+
+Cada contenedor debe listar `dokploy-network`. Si `app` o el contenedor de Hermes **no**
+lo muestran, ese es el problema.
+
+### Corrección
+
+Ambos `docker-compose.yml` (el de la app y el de Hermes) deben declarar la red externa:
+
+```yaml
+services:
+  app:            # (o hermes)
+    networks: [dokploy-network]
+
+networks:
+  dokploy-network:
+    external: true
+```
+
+El de la app ya viene así en el repositorio; el de Hermes hay que agregarlo igual.
+
+1. Guarda el compose de Hermes y **redeploya** (o usa su webhook de deploy):
+   ```sh
+   # desde cualquier terminal con acceso a internet
+   curl -X POST "https://dokploy.giansmd.dev/api/deploy/compose/8UbrcQ5KFtWqxBlwLtp_"
+   ```
+2. Redeploya también `app` para regenerar las etiquetas de Traefik.
+3. Repite las dos pruebas del inicio: el DNS debe resolver una IP y el dominio debe
+   devolver `200`.
+
+### Y no olvides el HTTPS del dominio
+
+En Dokploy → `app` → **Domains** la fila del dominio debe quedar:
+
+| Campo | Valor |
+|---|---|
+| Host | `eduardo-agente-yuldzi-063818-169-58-140-8.sslip.io` |
+| Path | `/` |
+| Service | `app` |
+| Port | `3000` |
+| HTTPS | **activado** |
+| Certificate Provider | **Let's Encrypt** |
+
+Si dejas `HTTP` + `Cert: none`, Whapi no podrá llamar al webhook (rechaza certificados
+autofirmados y el `https://` dará 404 de Traefik porque no hay router TLS).
+Tras activarlo, **redeploya** y comprueba:
+
+```sh
+node -e 'fetch("https://TU_DOMINIO/api/webhook/whapi").then(async r=>console.log(r.status,await r.text()))'
+```
+
+---
+
 ## 1. Semáforo rápido (nuevo endpoint)
 
 Desde la terminal del servicio `app`:
