@@ -156,7 +156,7 @@ const MCP_TOOLS_CATALOG = [
         id_negociacion: { type: "number", description: "ID de la negociación." },
         id_persona: { type: "number", description: "ID del lead." },
         subtotal: { type: "number", description: "Monto total del pedido en Soles." },
-        tipo: { type: "string", enum: ["LOCAL", "DELIVERY", "WHATSAPP"], description: "Tipo de entrega." },
+        tipo: { type: "string", enum: ["LOCAL", "RESERVA"], description: "Tipo de pedido." },
       },
       required: ["id_negociacion", "id_persona", "subtotal"],
     },
@@ -293,15 +293,15 @@ async function ejecutarHerramientaMCP(name: string, args: any): Promise<any> {
     case "registrar_pedido": {
       const resPed = await executeQuery<{ id_pedido: number }>(`
         INSERT INTO dbo.pedido (id_persona, id_negociacion, tipo, fecha_registro, estado, subtotal, descuento, total)
-        VALUES (@idP, @idNeg, @tipo, SYSUTCDATETIME(), 'PENDIENTE', @subtotal, 0, @subtotal);
+        VALUES (@idP, @idNeg, @tipo, SYSUTCDATETIME(), 'REGISTRADO', @subtotal, 0, @subtotal);
         SELECT SCOPE_IDENTITY() AS id_pedido;
       `, {
         idP: { type: sql.BigInt, value: args.id_persona },
         idNeg: { type: sql.BigInt, value: args.id_negociacion },
-        tipo: { type: sql.VarChar(20), value: args.tipo || "WHATSAPP" },
+        tipo: { type: sql.VarChar(20), value: args.tipo || "LOCAL" },
         subtotal: { type: sql.Decimal(10, 2), value: args.subtotal },
       });
-      return { success: true, id_pedido: resPed[0]?.id_pedido, estado: "PENDIENTE" };
+      return { success: true, id_pedido: resPed[0]?.id_pedido, estado: "REGISTRADO" };
     }
 
     case "actualizar_estado_payer": {

@@ -238,7 +238,7 @@ export async function POST(request: Request) {
         const resPed = await executeQuery<{ id_pedido: number }>(
           `
           INSERT INTO dbo.pedido (id_persona, id_negociacion, tipo, fecha_registro, estado, subtotal, descuento, total)
-          VALUES (@idPersona, @idNeg, 'WHATSAPP', SYSUTCDATETIME(), 'CONFIRMADO', @monto, 0, @monto);
+          VALUES (@idPersona, @idNeg, 'LOCAL', SYSUTCDATETIME(), 'PAGADO', @monto, 0, @monto);
           SELECT SCOPE_IDENTITY() AS id_pedido;
         `,
           {
@@ -277,6 +277,7 @@ export async function POST(request: Request) {
         `
         UPDATE dbo.negociacion 
         SET estado = 'CONVERTIDA', 
+            fecha_fin = COALESCE(fecha_fin, SYSUTCDATETIME()),
             fecha_primer_pago = COALESCE(fecha_primer_pago, SYSUTCDATETIME())
         WHERE id_negociacion = @idNeg;
       `,

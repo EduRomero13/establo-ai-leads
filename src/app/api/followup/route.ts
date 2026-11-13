@@ -215,8 +215,8 @@ export async function POST(request: Request) {
           idSesion = sesionCheck[0].id_sesion;
         } else {
           const newSes = await executeQuery<{ id_sesion: number }>(`
-            INSERT INTO dbo.sesion_whatsapp (id_persona, telefono_cliente, fecha_inicio, estado)
-            VALUES (@idP, @tel, SYSUTCDATETIME(), 'ABIERTA');
+            INSERT INTO dbo.sesion_whatsapp (id_persona, telefono_cliente, fecha_inicio, fecha_ultimo_mensaje, estado)
+            VALUES (@idP, @tel, SYSUTCDATETIME(), SYSUTCDATETIME(), 'ABIERTA');
             SELECT SCOPE_IDENTITY() AS id_sesion;
           `, { idP: { type: sql.BigInt, value: lead.id_persona }, tel: { type: sql.VarChar(20), value: telefonoDestino } });
           idSesion = newSes[0].id_sesion;
@@ -307,30 +307,37 @@ export async function POST(request: Request) {
       `, { codigo: { type: sql.VarChar(20), value: medioPago.toUpperCase() } });
       const idMedioPago = mpData[0]?.id_medio_pago || 1;
 
-      // 1. Crear el pedido oficial atendido por este vendedor
-      const pedResult = await executeQuery<{ id_pedido: number }>(`
-        INSERT INTO dbo.pedido (id_persona, id_negociacion, id_personal_atiende, tipo, fecha_registro, estado, fecha_atencion, subtotal, descuento, total)
-        VALUES (@idP, @idNeg, @idPersonal, 'LOCAL', SYSUTCDATETIME(), 'ATENDIDO', SYSUTCDATETIME(), @monto, 0, @monto);
-        SELECT SCOPE_IDENTITY() AS id_pedido;
-      `, {
-        idP: { type: sql.BigInt, value: neg.id_persona },
-        idNeg: { type: sql.BigInt, value: id_negociacion },
-        idPersonal: { type: sql.Int, value: id_personal },
-        monto: { type: sql.Decimal(10, 2), value: montoNum },
-      });
+      // 1. Crear el pedido oficial atendido por este vendedor (o reutilizarlo si ya existe)
+      let idPedido: number = neg.id_pedido;
+      if (!idPedido) {
+        const pedResult = await executeQuery<{ id_pedido: number }>(`
+          INSERT INTO dbo.pedido (id_persona, id_negociacion, id_personal_atiende, tipo, fecha_registro, estado, fecha_atencion, subtotal, descuento, total)
+          VALUES (@idP, @idNeg, @idPersonal, 'LOCAL', SYSUTCDATETIME(), 'ATENDIDO', SYSUTCDATETIME(), @monto, 0, @monto);
+          SELECT SCOPE_IDENTITY() AS id_pedido;
+        `, {
+          idP: { type: sql.BigInt, value: neg.id_persona },
+          idNeg: { type: sql.BigInt, value: id_negociacion },
+          idPersonal: { type: sql.Int, value: id_personal },
+          monto: { type: sql.Decimal(10, 2), value: montoNum },
+        });
+        idPedido = pedResult[0].id_pedido;
+      }
 
-      const idPedido = pedResult[0].id_pedido;
-
-      // 2. Registrar el pago confirmado en dbo.pago
-      await executeQuery(`
-        INSERT INTO dbo.pago (id_pedido, id_medio_pago, monto, moneda, fecha_pago, estado, referencia)
-        VALUES (@idPed, @idMP, @monto, 'PEN', SYSUTCDATETIME(), 'CONFIRMADO', @ref);
-      `, {
-        idPed: { type: sql.BigInt, value: idPedido },
-        idMP: { type: sql.Int, value: idMedioPago },
-        monto: { type: sql.Decimal(10, 2), value: montoNum },
-        ref: { type: sql.VarChar(100), value: referenciaPago },
-      });
+      // 2. Registrar el pago confirmado en dbo.pago (evitar duplicar si ya existe)
+      const pagoExistente = await executeQuery<{ id_pago: number }>(`
+        SELECT TOP 1 id_pago FROM dbo.pago WHERE id_pedido = @idPed AND estado = 'CONFIRMADO';
+      `, { idPed: { type: sql.BigInt, value: idPedido } });
+      if (pagoExistente.length === 0) {
+        await executeQuery(`
+          INSERT INTO dbo.pago (id_pedido, id_medio_pago, monto, moneda, fecha_pago, estado, referencia)
+          VALUES (@idPed, @idMP, @monto, 'PEN', SYSUTCDATETIME(), 'CONFIRMADO', @ref);
+        `, {
+          idPed: { type: sql.BigInt, value: idPedido },
+          idMP: { type: sql.Int, value: idMedioPago },
+          monto: { type: sql.Decimal(10, 2), value: montoNum },
+          ref: { type: sql.VarChar(100), value: referenciaPago },
+        });
+      }
 
       // 3. Actualizar la negociación a CONVERTIDA con el vendedor y pedido asociado
       await executeQuery(`
@@ -347,11 +354,28 @@ export async function POST(request: Request) {
         idNeg: { type: sql.BigInt, value: id_negociacion },
       });
 
-      // 4. Actualizar fase del lead a PAYER y registrar en historial
+      // 4. Actualizar fase del lead a PAYER y registrar en historial (idempotente)
       await executeQuery(`
         UPDATE dbo.persona SET fase_actual = 'PAYER' WHERE id_persona = @idP;
-        INSERT INTO dbo.historial_fases (id_persona, fase, fecha_inicio) VALUES (@idP, 'PAYER', SYSUTCDATETIME());
       `, { idP: { type: sql.BigInt, value: neg.id_persona } });
+
+      const historialExistente = await executeQuery<{ id_historial: number }>(`
+        SELECT TOP 1 id_historial FROM dbo.historial_fases
+        WHERE id_persona = @idP AND fase = 'PAYER' AND id_pedido = @idPed;
+      `, {
+        idP: { type: sql.BigInt, value: neg.id_persona },
+        idPed: { type: sql.BigInt, value: idPedido },
+      });
+      if (historialExistente.length === 0) {
+        await executeQuery(`
+          INSERT INTO dbo.historial_fases (id_persona, fase, fecha_cambio, id_negociacion, id_pedido)
+          VALUES (@idP, 'PAYER', SYSUTCDATETIME(), @idNeg, @idPed);
+        `, {
+          idP: { type: sql.BigInt, value: neg.id_persona },
+          idNeg: { type: sql.BigInt, value: id_negociacion },
+          idPed: { type: sql.BigInt, value: idPedido },
+        });
+      }
 
       // 5. Registrar en auditoría de acciones del personal
       await executeQuery(`
