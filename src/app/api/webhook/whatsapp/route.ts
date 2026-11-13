@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
               const eventId = `status_${status.id}_${status.status}_${status.timestamp}`;
               const { esDuplicado, idEvento } =
                 await registrarEventoIntegracion(
-                  "META",
+                  "WHATSAPP_CLOUD",
                   eventId,
                   `STATUS_${status.status.toUpperCase()}`,
                 );
