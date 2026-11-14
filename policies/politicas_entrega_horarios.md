@@ -35,3 +35,11 @@
 4. **Modalidad para Llevar (Pick-up):**
    - El cliente puede coordinar su pedido por WhatsApp y pasar a recogerlo sin costo adicional en el local.
 
+---
+
+## 4. Confirmación de Pedido y Cadencia de Seguimiento (Agente IA)
+
+- **Tiempo de entrega tras confirmación:** 30 a 45 minutos desde que el cliente confirma su pedido/dirección; el agente debe agradecer y cerrar la conversación sin volver a ofrecer otros platos en bucle.
+- **Imágenes de platos:** Durante la negociación, el agente acompaña las recomendaciones con fotografías del plato servido en formato `.avif`.
+- **Insistencia ante falta de respuesta:** Máximo 3 recordatorios automáticos por ciclo abierto (**20 minutos**, **4 horas** y **48 horas**), deteniéndose automáticamente si el cliente responde o al llegar a la ventana de cierre de **72 horas**.
+

@@ -51,6 +51,9 @@ graph TD
 | **RN-14** | **Integridad de Ofertas y Anti-Duplicados** | Garantizar restricción `CHECK` (exactamente 1 objeto) y descartar reintentos idénticos en menos de 30s. | `dbo.sp_registrar_oferta_lead` | `toolRegistrarOfertaLead` | Escenario 2, 7 y Cierres | `oferta_negociacion`, `accion_agente` |
 | **RN-15** | **Trazabilidad de Respuestas a Ofertas** | Marcar si la propuesta fue `ACEPTADA`, `RECHAZADA` o quedó `SIN_RESPUESTA` para alimentar el embudo. | `dbo.sp_registrar_respuesta_oferta` | `toolRegistrarRespuestaOferta` | Escenario 8 | `oferta_negociacion`, `accion_agente` |
 | **RN-16** | **Blindaje de Diálogo, Clientes High-Ticket y De-escalación** | Atender peticiones de cortes premium (S/ 149), pivotar preguntas fuera de tema, resolver FAQ y calmar quejas. | Implementado en Capa Agente | Guardrails en `ai-agent.ts` | Sección de Blindaje | `producto_carta`, `combo`, `accion_agente` |
+| **RN-17** | **Cierre de Venta sin Bucle Post-Confirmación** | Evitar que el agente siga ofreciendo platos cuando el cliente ya confirmó pedido, dirección o pago. | Controlado por `estado = 'CONVERTIDA'` | `procesarMensajeLead` (`ai-agent.ts`) | Regla 4 Hermes + `1B` Heurístico | `negociacion`, `mensaje_whatsapp` |
+| **RN-18** | **Apoyo Visual de Platos en Negociación (AVIF)** | Incentivar la compra enviando la foto del plato/combo final servido en formato `.avif`. | Catálogo `producto_carta` / `combo` | `platos-media.ts` + `whatsapp-service.ts` | `enriquecer` en `procesarMensajeLead` | `producto_carta`, `combo`, `mensaje_whatsapp` |
+| **RN-19** | **Cadencia de Insistencia Automática (Anti-Spam)** | Reactivar leads inactivos a los 20 min, 4 h y 48 h (máx. 3 toques) dentro de la ventana de 24 h / 72 h. | Consulta sobre `mensaje_whatsapp` + `accion_agente` | `api/cron/followup/route.ts` | Cron Job Dokploy | `negociacion`, `mensaje_whatsapp`, `accion_agente` |
 
 ---
 
@@ -121,6 +124,21 @@ graph TD
   * **Identidad:** Responde con orgullo y transparencia su condición de Agente Inteligente oficial conectado a SQL Server.
   * **FAQ Operativa:** Horarios (12:00 m - 11:00 pm), ubicación en Trujillo (California / Víctor Larco), opciones de ensaladas/frescas y reservas de eventos.
   * **De-escalación:** Si recibe quejas o insultos, mantiene la compostura profesional y ofrece canal de soporte sin entrar en discusiones.
+
+### RN-17: Cierre de Venta sin Bucle Post-Confirmación
+* **Objetivo:** Evitar que el agente reinicie la venta o siga ofreciendo platos cuando el cliente ya confirmó su pedido, envió su dirección o avisó que realizó el pago.
+* **Implementación:** Regla 4 del prompt de Hermes y bloque `1B` en `src/lib/ai-agent.ts`.
+* **Regla:** Ante confirmación, envío de dirección, aviso de pago (`ya yapeé`, `ya pagué`) o negociación `CONVERTIDA`, el agente responde confirmando que el pedido pasa a la brasa con entrega estimada de **30 a 45 minutos**, agradece y cierra cordialmente sin nuevas preguntas de oferta.
+
+### RN-18: Apoyo Visual de Platos en Negociación (AVIF)
+* **Objetivo:** Incrementar la conversión mostrando la foto real del plato o combo final servido cuando se recomienda o negocia una opción.
+* **Implementación:** `src/lib/platos-media.ts`, `src/lib/ai-agent.ts`, `src/app/agente/page.tsx` y `src/lib/whatsapp-service.ts` con archivos `.avif` en `public/platos/`.
+* **Regla:** Cada oferta sugerida o plato mencionado en negociación adjunta automáticamente su imagen `.avif` en el panel y por WhatsApp (con respaldo automático a texto si la pasarela no acepta el archivo).
+
+### RN-19: Cadencia de Insistencia Automática (Anti-Spam)
+* **Objetivo:** Recuperar conversaciones donde el cliente dejó de responder sin saturarlo ni arriesgar bloqueos en WhatsApp.
+* **Implementación:** `src/app/api/cron/followup/route.ts`.
+* **Regla:** Máximo **3 toques automáticos** por ciclo `ABIERTA` mientras el último mensaje sea saliente: **Toque 1** a los **20 minutos** (con foto del plato), **Toque 2** a las **4 horas** (incentivo dentro de la ventana de 24 h) y **Toque 3** a las **48 horas** (pregunta rápida antes del límite `TIMEOUT_72H`). Se detiene de inmediato si el cliente responde.
 
 ---
 
