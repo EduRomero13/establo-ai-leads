@@ -7,6 +7,7 @@ import {
   OfertaNegociacion,
 } from "@/types/database";
 import { evaluarPromocion } from "./promotions-engine";
+import { detectarPlatoMediaPorTexto, getPlatoRelativePath } from "./platos-media";
 import {
   toolConsultarPerfilLead,
   toolConsultarProductoFavorito,
@@ -326,9 +327,40 @@ export interface AgenteRespuesta {
   accionTomada?: string;
   requiereIntervencionHumana?: boolean;
   motor?: "HERMES" | "HEURISTICO";
+  imagenUrl?: string;
+  imagenSlug?: string;
 }
 
 export async function procesarMensajeLead(
+  idNegociacion: number,
+  mensajeCliente: string,
+  historialPrevio: { remitente: "lead" | "agente"; texto: string }[] = [],
+): Promise<AgenteRespuesta> {
+  const respuesta = await procesarMensajeLeadInterno(
+    idNegociacion,
+    mensajeCliente,
+    historialPrevio,
+  );
+
+  // Adjuntar imagen AVIF del plato/combo si se está negociando u ofreciendo uno
+  const esCierreSinOferta =
+    respuesta.accionTomada?.includes("Confirmación final") ||
+    respuesta.accionTomada?.includes("Despedida");
+
+  if (!respuesta.imagenUrl && !esCierreSinOferta) {
+    const plato = detectarPlatoMediaPorTexto(
+      respuesta.ofertaSugerida?.nombre || respuesta.mensaje,
+    );
+    if (plato) {
+      respuesta.imagenSlug = plato.slug;
+      respuesta.imagenUrl = getPlatoRelativePath(plato.slug, "avif");
+    }
+  }
+
+  return respuesta;
+}
+
+async function procesarMensajeLeadInterno(
   idNegociacion: number,
   mensajeCliente: string,
   historialPrevio: { remitente: "lead" | "agente"; texto: string }[] = [],

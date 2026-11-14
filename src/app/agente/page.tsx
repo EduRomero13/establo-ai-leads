@@ -32,6 +32,7 @@ interface TelemetriaCopiloto {
     precio?: number;
     beneficio?: string;
   } | null;
+  imagenUrl?: string | null;
   sugerenciasComerciales?: string[];
 }
 
@@ -573,6 +574,16 @@ function AgenteIAContent() {
                 <p className="font-extrabold text-xs text-[#241E1A] dark:text-[#F5F3F0]">
                   {telemetria.ofertaSugerida.nombre}
                 </p>
+
+                {telemetria.imagenUrl && (
+                  <div className="overflow-hidden rounded-lg border border-[#C96D35]/20">
+                    <img
+                      src={telemetria.imagenUrl}
+                      alt={telemetria.ofertaSugerida.nombre}
+                      className="w-full h-32 object-cover"
+                    />
+                  </div>
+                )}
 
                 <div className="pt-1 flex items-center gap-1.5">
                   <button

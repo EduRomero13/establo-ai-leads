@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { executeQuery, sql } from "./db";
 import { procesarMensajeLead, toolRegistrarAccionAgente } from "./ai-agent";
+import { detectarPlatoMediaPorTexto, getPlatoAbsoluteUrl } from "./platos-media";
 
 // =========================================================================
 // TIPOS Y DEFINICIONES DE WHATSAPP BUSINESS CLOUD API
@@ -192,7 +193,8 @@ export async function marcarEventoProcesado(idEvento: number, error?: string) {
 export async function enviarMensajeWhatsApp(params: {
   telefonoDestino: string; // ej "51948834920"
   texto: string;
-}): Promise<{ success: boolean; wamid?: string; error?: string }> {
+  imagenUrl?: string | null;
+}): Promise<{ success: boolean; wamid?: string; error?: string; sentImage?: boolean }> {
   // 1. Determinar proveedor
   const whapiToken = process.env.WHAPI_TOKEN?.trim();
   const metaToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
@@ -204,9 +206,12 @@ export async function enviarMensajeWhatsApp(params: {
     return enviarMensajeWhatsAppOficial(params);
   } else {
     // Modo Demo
-    console.log(`[WhatsApp DEMO OUT] Para: ${params.telefonoDestino} | Mensaje: ${params.texto}`);
+    console.log(
+      `[WhatsApp DEMO OUT] Para: ${params.telefonoDestino} | Imagen: ${params.imagenUrl || "ninguna"} | Mensaje: ${params.texto}`
+    );
     return {
       success: true,
+      sentImage: Boolean(params.imagenUrl),
       wamid: `wamid.DEMO_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     };
   }
@@ -215,7 +220,8 @@ export async function enviarMensajeWhatsApp(params: {
 async function enviarMensajeWhapi(params: {
   telefonoDestino: string;
   texto: string;
-}): Promise<{ success: boolean; wamid?: string; error?: string }> {
+  imagenUrl?: string | null;
+}): Promise<{ success: boolean; wamid?: string; error?: string; sentImage?: boolean }> {
   try {
     const token = process.env.WHAPI_TOKEN;
     const apiUrl = (process.env.WHAPI_API_URL || "https://gate.whapi.cloud").replace(/\/+$/, "");
@@ -234,6 +240,34 @@ async function enviarMensajeWhapi(params: {
       }
       const conPais = telDigits.startsWith("51") ? telDigits : `51${telDigits}`;
       to = `${conPais}@s.whatsapp.net`;
+    }
+
+    const esImagenPublica =
+      Boolean(params.imagenUrl) &&
+      /^https?:\/\//i.test(params.imagenUrl!) &&
+      !/localhost|127\.0\.0\.1/i.test(params.imagenUrl!);
+
+    if (esImagenPublica) {
+      const imgUrl = `${apiUrl}/messages/image`;
+      const imgRes = await fetch(imgUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          to,
+          media: params.imagenUrl,
+          caption: params.texto,
+        }),
+      });
+      const imgData = await imgRes.json().catch(() => ({}));
+      if (imgRes.ok && imgData?.sent !== false) {
+        const wamid = imgData?.message?.id;
+        console.log(`[Whapi OK - IMAGEN] Enviado a ${to} (wamid=${wamid || "sin id"})`);
+        return { success: true, wamid, sentImage: true };
+      }
+      console.warn("[Whapi Image Fallback -> Texto]:", imgRes.status, imgData);
     }
 
     const url = `${apiUrl}/messages/text`;
@@ -273,7 +307,8 @@ async function enviarMensajeWhapi(params: {
 export async function enviarMensajeWhatsAppOficial(params: {
   telefonoDestino: string;
   texto: string;
-}): Promise<{ success: boolean; wamid?: string; error?: string }> {
+  imagenUrl?: string | null;
+}): Promise<{ success: boolean; wamid?: string; error?: string; sentImage?: boolean }> {
   const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
   const version = process.env.WHATSAPP_API_VERSION?.trim() || "v21.0";
@@ -283,6 +318,33 @@ export async function enviarMensajeWhatsAppOficial(params: {
     const toPhone = telDigits.startsWith("51") ? telDigits : `51${telDigits}`;
 
     const url = `https://graph.facebook.com/${version}/${phoneId}/messages`;
+    const esImagenPublica =
+      Boolean(params.imagenUrl) &&
+      /^https?:\/\//i.test(params.imagenUrl!) &&
+      !/localhost|127\.0\.0\.1/i.test(params.imagenUrl!);
+
+    if (esImagenPublica) {
+      const imgRes = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: toPhone,
+          type: "image",
+          image: { link: params.imagenUrl, caption: params.texto },
+        }),
+      });
+      const imgData = await imgRes.json().catch(() => ({}));
+      if (imgRes.ok) {
+        return { success: true, wamid: imgData?.messages?.[0]?.id, sentImage: true };
+      }
+      console.warn("[Meta Image Fallback -> Texto]:", imgData);
+    }
+
     const payload = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -469,10 +531,21 @@ Para darte promociones exclusivas y asesorarte a tu gusto, regístrate en segund
       { remitente: 'lead', texto: params.contenido },
     ]);
 
-    // Enviar respuesta por WhatsApp
+    const platoMedia =
+      (respuestaAgente.imagenSlug
+        ? { slug: respuestaAgente.imagenSlug }
+        : detectarPlatoMediaPorTexto(
+            respuestaAgente.ofertaSugerida?.nombre || respuestaAgente.mensaje
+          ));
+    const imagenWhatsAppUrl = platoMedia
+      ? getPlatoAbsoluteUrl(platoMedia.slug, "avif")
+      : null;
+
+    // Enviar respuesta por WhatsApp (con foto del plato si aplica)
     const envio = await enviarMensajeWhatsApp({
       telefonoDestino: params.remitenteRaw,
       texto: respuestaAgente.mensaje,
+      imagenUrl: imagenWhatsAppUrl,
     });
 
     if (envio.success) {
@@ -482,7 +555,7 @@ Para darte promociones exclusivas y asesorarte a tu gusto, regístrate en segund
         {
           idSesion: { type: sql.BigInt, value: idSesion },
           wamid: { type: sql.VarChar(200), value: envio.wamid || null },
-          tipo: { type: sql.VarChar(20), value: mapearTipoMensaje('TEXTO') },
+          tipo: { type: sql.VarChar(20), value: mapearTipoMensaje(envio.sentImage ? 'IMAGEN' : 'TEXTO') },
           contenido: { type: sql.NVarChar(sql.MAX), value: respuestaAgente.mensaje },
         }
       );

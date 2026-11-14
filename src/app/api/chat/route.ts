@@ -197,6 +197,7 @@ export async function POST(request: Request) {
           estrategiaComercial:
             "Venta Consultiva Transparente basada en Preferencias SQL V3",
           ofertaSugerida: respuestaAgente.ofertaSugerida,
+          imagenUrl: respuestaAgente.imagenUrl || null,
           sugerenciasComerciales: respuestaAgente.sugerenciasComerciales || [],
         },
       });
