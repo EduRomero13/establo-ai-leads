@@ -20,25 +20,28 @@ function normalizarTelefonoPeru(raw: string): {
 
 export async function GET() {
   try {
-    const [segmentos, productos] = await Promise.all([
-      executeQuery<{ id_segmento: number; nombre: string; descripcion: string | null }>(
-        `SELECT id_segmento, nombre, descripcion
-         FROM dbo.segmento_cliente
-         ORDER BY id_segmento;`
-      ),
-      executeQuery<{
-        id_producto: number;
-        nombre: string;
-        categoria: string;
-        es_corte: boolean;
-        precio: number;
-      }>(
-        `SELECT id_producto, nombre, categoria, es_corte, precio
-         FROM dbo.producto_carta
-         WHERE activo = 1
-         ORDER BY es_corte DESC, categoria, nombre;`
-      ),
-    ]);
+    const segmentos = await executeQuery<{
+      id_segmento: number;
+      nombre: string;
+      descripcion: string | null;
+    }>(
+      `SELECT id_segmento, nombre, descripcion
+       FROM dbo.segmento_cliente
+       ORDER BY id_segmento;`
+    );
+
+    const productos = await executeQuery<{
+      id_producto: number;
+      nombre: string;
+      categoria: string;
+      es_corte: boolean;
+      precio: number;
+    }>(
+      `SELECT id_producto, nombre, categoria, es_corte, precio
+       FROM dbo.producto_carta
+       WHERE activo = 1
+       ORDER BY es_corte DESC, categoria, nombre;`
+    );
 
     return NextResponse.json({
       success: true,
