@@ -10,7 +10,6 @@ import {
   Bot,
   Flame,
   ClockAlert,
-  Settings,
   Sparkles,
   X,
   BadgeCheck,
@@ -60,12 +59,6 @@ export const navigationItems = [
     href: "/recomendaciones",
     icon: TrendingUp,
     badge: "Carta",
-  },
-  {
-    name: "Configuración",
-    href: "/configuracion",
-    icon: Settings,
-    badge: null,
   },
 ];
 

@@ -30,7 +30,6 @@ const SECCIONES_TITULOS: Record<string, { titulo: string; badge: string }> = {
   "/recomendaciones": { titulo: "Carta y Combos", badge: "Menú Oficial" },
   "/catalogo": { titulo: "Catálogo", badge: "Oficial" },
   "/analitica": { titulo: "Indicadores", badge: "KPIs" },
-  "/configuracion": { titulo: "Configuración", badge: "Meta API" },
 };
 
 export function Navbar({ onOpenSidebar }: NavbarProps) {
