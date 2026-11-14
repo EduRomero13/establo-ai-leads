@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { formatCurrency, formatDateOnly } from "@/lib/utils";
+import { detectarPlatoMediaPorTexto, getPlatoRelativePath } from "@/lib/platos-media";
 
 export default function CatalogoComercialPage() {
   const [data, setData] = useState<any>(null);
@@ -128,12 +129,24 @@ export default function CatalogoComercialPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {productosFiltrados.map((prod: any) => (
+            {productosFiltrados.map((prod: any) => {
+              const media = detectarPlatoMediaPorTexto(prod.nombre);
+              return (
               <div
                 key={prod.id_producto}
                 className="p-5 rounded-2xl bg-[#FFFFFF] dark:bg-[#1D2023] border border-[#E8E0D8] dark:border-[#383C40] shadow-sm flex flex-col justify-between"
               >
                 <div>
+                  {media && (
+                    <div className="mb-3 overflow-hidden rounded-xl border border-[#E8E0D8] dark:border-[#383C40] bg-[#FAF8F5] dark:bg-[#121416]">
+                      <img
+                        src={getPlatoRelativePath(media.slug, "avif")}
+                        alt={prod.nombre}
+                        className="w-full h-40 object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-extrabold text-base text-[#241E1A] dark:text-[#F5F3F0]">
                       {prod.nombre}
@@ -166,7 +179,8 @@ export default function CatalogoComercialPage() {
                   <span>Estilo: {prod.estilo || "Criollo"}</span>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -174,12 +188,24 @@ export default function CatalogoComercialPage() {
       {/* PESTAÑA 2: COMBOS */}
       {tab === "combos" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {combos.map((c: any) => (
+          {combos.map((c: any) => {
+            const media = detectarPlatoMediaPorTexto(c.nombre);
+            return (
             <div
               key={c.id_combo}
               className="p-6 rounded-2xl bg-[#FFFFFF] dark:bg-[#1D2023] border border-[#E8E0D8] dark:border-[#383C40] shadow-sm flex flex-col justify-between relative overflow-hidden"
             >
               <div className="space-y-3">
+                {media && (
+                  <div className="overflow-hidden rounded-xl border border-[#E8E0D8] dark:border-[#383C40] bg-[#FAF8F5] dark:bg-[#121416]">
+                    <img
+                      src={getPlatoRelativePath(media.slug, "avif")}
+                      alt={c.nombre}
+                      className="w-full h-44 object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
                 <div className="flex items-start justify-between">
                   <span className="px-2 py-0.5 rounded bg-[#C96D35]/15 text-[#C96D35] dark:text-[#E8A46D] font-extrabold text-[10px] uppercase">
                     Paquete Parrillero
@@ -220,7 +246,8 @@ export default function CatalogoComercialPage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

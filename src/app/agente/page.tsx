@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { detectarPlatoMediaPorTexto, getPlatoRelativePath } from "@/lib/platos-media";
 
 interface TelemetriaCopiloto {
   propuestaMensaje?: string;
@@ -422,6 +423,10 @@ function AgenteIAContent() {
             ) : (
               mensajes.map((m) => {
                 const esEntrante = m.direccion === "ENTRANTE";
+                const platoMedia =
+                  m.tipo === "IMAGEN" || !esEntrante
+                    ? detectarPlatoMediaPorTexto(m.contenido)
+                    : null;
                 return (
                   <div
                     key={m.id_mensaje}
@@ -434,6 +439,16 @@ function AgenteIAContent() {
                           : "bg-gradient-to-r from-[#C96D35] to-[#B65F29] text-white"
                       }`}
                     >
+                      {platoMedia && (
+                        <div className="mb-2 overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-black/5">
+                          <img
+                            src={getPlatoRelativePath(platoMedia.slug, "avif")}
+                            alt={platoMedia.nombre}
+                            className="w-full max-w-[240px] max-h-40 object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
                       <p className="whitespace-pre-wrap leading-relaxed">{m.contenido}</p>
                     </div>
                     <span className="text-[9px] text-[#746B65] dark:text-[#B3ACA5] mt-0.5 px-1 flex items-center gap-1">

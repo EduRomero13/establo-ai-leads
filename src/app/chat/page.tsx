@@ -17,6 +17,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { detectarPlatoMediaPorTexto, getPlatoRelativePath } from "@/lib/platos-media";
 
 export default function ConversacionesInboxPage() {
   const [sesiones, setSesiones] = useState<any[]>([]);
@@ -301,6 +302,10 @@ export default function ConversacionesInboxPage() {
                 ) : (
                   mensajes.map((m) => {
                     const esSaliente = m.direccion === "SALIENTE";
+                    const platoMedia =
+                      m.tipo === "IMAGEN" || esSaliente
+                        ? detectarPlatoMediaPorTexto(m.contenido)
+                        : null;
                     return (
                       <div
                         key={m.id_mensaje}
@@ -313,6 +318,16 @@ export default function ConversacionesInboxPage() {
                               : "bg-[#FFFFFF] dark:bg-[#292D31] text-[#241E1A] dark:text-[#F5F3F0] border border-[#E8E0D8] dark:border-[#383C40] rounded-bl-xs"
                           }`}
                         >
+                          {platoMedia && (
+                            <div className="mb-2 overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-black/5">
+                              <img
+                                src={getPlatoRelativePath(platoMedia.slug, "avif")}
+                                alt={platoMedia.nombre}
+                                className="w-full max-w-[260px] max-h-44 object-cover"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
                           <p className="whitespace-pre-line leading-relaxed">{m.contenido}</p>
                           <div
                             className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
